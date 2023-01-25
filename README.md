@@ -12,6 +12,7 @@ sudo ./KD100 -c config_file -d
 
 Notes
 -----
+- Only works on X11 based desktops
 - You do not need to run this as root if you set a udev rule for the device. Create/edit a rule file in /etc/udev/rules.d/ and add the following, then save and reboot or reload your udev rules
 ```
 SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GROUP="plugdev"

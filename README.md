@@ -8,7 +8,7 @@ sudo ./KD100 -c config_file -d
 ```
 **-c**  Specify a config file (default.cfg is used normally)
 
-**-d**  Enable debug output (can be used twice to output the full packet of data recieved from the device
+**-d**  Enable debug output (can be used twice to output the full packet of data recieved from the device)
 
 Notes
 -----
@@ -35,8 +35,8 @@ Building From Source
 --------------------
 ```
 gcc -lusb-1.0 KD100.c -o KD100
-```
-```
+
+
 gcc -lxdo output.c -o output
 ```
 > **_NOTE:_**  Requires Libusb and Xdo

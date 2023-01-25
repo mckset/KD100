@@ -25,6 +25,7 @@ Known Issues
 ------------
 - The driver cannot trigger keyboard shorcuts using key/buttons pressed from another device
 - The driver cannot trigger keyboard shortcuts from combining multiple buttons on the device
+- No mouse button support
 
 Work Arounds
 ------------

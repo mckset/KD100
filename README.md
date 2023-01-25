@@ -29,3 +29,13 @@ Known Issues
 Work Arounds
 ------------
 Both issues might be able to be worked arounds by creating a script that can send key inputs pair with keys/buttons currently being held
+
+Building From Source
+--------------------
+> **_NOTE:_**  Requires Libusb and Xdo
+```
+gcc -lusb-1.0 KD100.c -o KD100
+```
+```
+gcc -lxdo output.c -o output
+```

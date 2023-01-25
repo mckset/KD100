@@ -3,19 +3,18 @@ A simple driver for the Huion KD100 mini keypad written in C to give the device 
 
 Usage
 -----
-'''
+```
 sudo ./KD100 -c config_file -d
-'''
+```
 -c  Specify a config file (default.cfg is used normally)
 -d  Enable debug output (can be used twice to output the full packet of data recieved from the device)
 
 Notes
 -----
-- You do not need to run this as root if you set a udev rule for the device. Create/edit a file in /etc/udev/rules.d/ and add the following:
-'''
+- You do not need to run this as root if you set a udev rule for the device. Create/edit a file in /etc/udev/rules.d/ and add the following, then save and reboot or reload your udev rules
+```
 SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GROUP="plugdev"
-'''
-  Then save and reboot or reload your udev rules
+```
 - The output executable is only there to prevent users from needing to download xdotool. Why is it not part of the main program? Every time I tried to add it, it crashed the program without giving an reason and I couldn't find a work around. 
 - Technically speaking, this can support other devices, especially if they send the same type of byte information, but the code should be easy enough to edit if you wanted to use it with some other usb device
 - New config files must contain the same format and line count as the default file

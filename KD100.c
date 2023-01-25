@@ -53,11 +53,12 @@ void GetDevice(int v, int p, int debug){
 	}
 
 	// Load config file
-	printf("Loading config...\n");
+	if (debug == 1){
+		printf("Loading config...\n");
+	}
 	FILE *f = fopen(file, "r");
 	if (f == NULL){
 		printf("FILE NOT FOUND\n");
-		fclose(f);
 		return;
 	}
 	char data[512];
@@ -209,8 +210,6 @@ int main(int args, char *in[])
 	}
 	libusb_set_option(*ctx, LIBUSB_OPTION_LOG_LEVEL, 0);
 	GetDevice(0x256c, 0x006d, d);
-	//GetDevice(0x0c45, 0x7603);
-	printf("Everything finished!\n");
 	libusb_exit(*ctx);
 	return 0;
 }

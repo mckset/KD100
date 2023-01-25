@@ -17,7 +17,7 @@ Notes
 ```
 SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GROUP="plugdev"
 ```
-- The output executable is only there to prevent users from needing to download xdotool. Why is it not part of the main program? Every time I tried to add it, it crashed the program without giving an reason and I couldn't find a work around. 
+- The output executable is only there to prevent users from needing to download xdotool. Why is it not part of the main program? Every time I tried to add it, it crashed the program without giving a reason and I couldn't find a work around. 
 - Technically speaking, this can support other devices, especially if they send the same type of byte information, but the code should be easy enough to edit if you wanted to use it with some other usb device
 - New config files must contain the same format and line count as the default file
 

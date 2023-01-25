@@ -1,5 +1,5 @@
-# KD100 Linux Driver
-A simple driver for the Huion KD100 mini keypad written in C to give the device some usability while waiting for Huion to fix their Linux drivers
+# Huion KD100 Linux Driver
+A simple driver for the Huion KD100 mini keypad written in C to give the device some usability while waiting for Huion to fix their Linux drivers. Each button can be configured to either act as a key/multiple keys or execute a program
 
 Usage
 -----
@@ -17,7 +17,7 @@ Notes
 ```
 SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GROUP="plugdev"
 ```
-- The output executable is only there to prevent users from needing to download xdotool. Why is it not part of the main program? Every time I tried to add it, it crashed the program without giving a reason and I couldn't find a work around. 
+- The output executable is only there to prevent users from needing to download xdotool. Why is it not part of the main program? Every time it was added to the main program, it crashed the without giving a reason
 - Technically speaking, this can support other devices, especially if they send the same type of byte information, but the code should be easy enough to edit if you wanted to use it with some other usb device
 - New config files must contain the same format and line count as the default file
 
@@ -32,10 +32,10 @@ Both issues might be able to be worked arounds by creating a script that can sen
 
 Building From Source
 --------------------
-> **_NOTE:_**  Requires Libusb and Xdo
 ```
 gcc -lusb-1.0 KD100.c -o KD100
 ```
 ```
 gcc -lxdo output.c -o output
 ```
+> **_NOTE:_**  Requires Libusb and Xdo

@@ -23,13 +23,13 @@ SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GR
 
 Known Issues
 ------------
-- The driver cannot trigger keyboard shorcuts using key/buttons pressed from another device
 - The driver cannot trigger keyboard shortcuts from combining multiple buttons on the device
 - No mouse button support
+> **_NOTE:_**  Both of these issues don't seem like a major problem. The mouse button one can be fixed (though I don't see a reason for it)
 
 Work Arounds
 ------------
-Both issues might be able to be worked arounds by creating a script that can send key inputs paired with keys/buttons currently being held
+The mouse button issue can be worked around by creating a script that utilizes xdotool to send mouse events and calling that script through a button function
 
 Building From Source
 --------------------

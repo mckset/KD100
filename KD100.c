@@ -3,7 +3,7 @@
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
-	At the moment, only the KD100 mini keypad is supported by this code officially
+	At the moment, only the KD100 mini keydial is supported by this code officially
 */
 
 #include <libusb-1.0/libusb.h>

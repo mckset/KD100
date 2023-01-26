@@ -24,7 +24,7 @@ SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GR
 Known Issues
 ------------
 - The driver cannot trigger keyboard shortcuts from combining multiple buttons on the device
-> **_NOTE:_**  Because of how the data is packaged, the driver currently cannot support reading more than one button down at a time (though this shouldn't be an issue)
+> **_NOTE:_**  Because of how the data is packaged, the driver currently cannot support reading more than one button down at a time
 
 Building From Source
 --------------------

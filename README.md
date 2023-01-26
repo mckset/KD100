@@ -24,19 +24,12 @@ SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GR
 Known Issues
 ------------
 - The driver cannot trigger keyboard shortcuts from combining multiple buttons on the device
-- No mouse button support
-> **_NOTE:_**  Both of these issues don't seem like a major problem. The mouse button one can be fixed (though I don't see a reason for it)
-
-Work Arounds
-------------
-The mouse button issue can be worked around by creating a script that utilizes xdotool to send mouse events and calling that script through a button function
+> **_NOTE:_**  Because of how the data is packaged, the driver currently cannot support reading more than one button down at a time (though this shouldn't be an issue)
 
 Building From Source
 --------------------
 ```
 gcc -lusb-1.0 KD100.c -o KD100
-
-
 gcc -lxdo output.c -o output
 ```
 > **_NOTE:_**  Requires Libusb and Xdo

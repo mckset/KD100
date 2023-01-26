@@ -122,19 +122,19 @@ void GetDevice(int v, int p, int debug){
 				
 				// Potential errors			
 				if (err == LIBUSB_ERROR_TIMEOUT)
-					printf("TIMEOUT\n\n");
+					printf("\nTIMEDOUT\n");
 				if (err == LIBUSB_ERROR_PIPE)
-					printf("PIPE\n\n");
+					printf("\nPIPE ERROR\n");
 				if (err == LIBUSB_ERROR_NO_DEVICE)
-					printf("NO DEVICE\n\n");
+					printf("\nDEVICE DISCONNECTED\n");
 				if (err == LIBUSB_ERROR_OVERFLOW)
-					printf("OVERFLOW\n\n");
+					printf("\nOVERFLOW ERROR\n");
 				if (err == LIBUSB_ERROR_INVALID_PARAM)
-					printf("INVALID\n\n");
+					printf("\nINVALID PARAMETERS\n");
 				if (err < 0){
 					if (debug == 1){
 						printf("Unable to retrieve data: %d\n", err);
-					}					
+					}			
 					break;		
 				}
 
@@ -186,6 +186,15 @@ void GetDevice(int v, int p, int debug){
 									}
 								}else
 									wheelFunction=0;
+							}else if (strcmp(events[k], "mouse1") == 0 || strcmp(events[k], "mouse2") == 0 || strcmp(events[k], "mouse3") == 0 || strcmp(events[k], "mouse4") == 0 || strcmp(events[k], "mouse5") == 0){
+								strcat(event, events[k]);
+								if (strlen(prevEvent) > 0 && strcmp(event, prevEvent) != 0){
+									strcat(prevEvent, " 1");
+									system(prevEvent);
+								}
+								strcpy(prevEvent, event);
+								strcat(event, " 0");
+								system(event);	
 							}else{
 								system(events[k]);
 							}

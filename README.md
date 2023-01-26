@@ -1,5 +1,5 @@
 # Huion KD100 Linux Driver
-A simple driver for the Huion KD100 mini keypad written in C to give the device some usability while waiting for Huion to fix their Linux drivers. Each button can be configured to either act as a key/multiple keys or to execute a program
+A simple driver for the Huion KD100 mini Keydial written in C to give the device some usability while waiting for Huion to fix their Linux drivers. Each button can be configured to either act as a key/multiple keys or to execute a program
 
 Usage
 -----

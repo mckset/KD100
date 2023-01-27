@@ -1,9 +1,9 @@
 /*
-	V1.1
+	V1.2
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
-	At the moment, only the KD100 mini keydial is supported by this code officially
+	At the moment, only the KD100 mini keypad is supported by this code officially
 */
 
 #include <libusb-1.0/libusb.h>
@@ -49,10 +49,14 @@ void GetDevice(int v, int p, int debug){
 	while (fscanf(f, "%[^\n] ", data) == 1){
 		if (l > 19 && l <= 76){ // Button functions
 			if (subL == 0){
-				type[i] = atoi(data);
+				type[i] = atoi(&data[5]);
 				subL = 1;
 			}else if (subL == 1){
-				strcpy(events[i], data);
+				char func[256];
+				for (int d = 10; d < sizeof(data); d++){
+					func[d-10] = data[d];
+				}
+				strcpy(events[i], func);
 				subL = -1;
 				i++;
 			}else{
@@ -60,7 +64,11 @@ void GetDevice(int v, int p, int debug){
 			}
 		}else if (l > 76){ // Wheel functions
 			if (subL < 3){
-				strcpy(wheelEvents[wheelFunction], data);
+				char func[256];
+				for (int d = 12; d < sizeof(data); d++){
+					func[d-12] = data[d];
+				}
+				strcpy(wheelEvents[wheelFunction], func);
 				wheelFunction++;
 				subL++;
 			}else{
@@ -159,9 +167,11 @@ void GetDevice(int v, int p, int debug){
 				}
 				if (keycode == 641){ // Wheel Clockwise
 					strcat(event, wheelEvents[wheelFunction]);
+					strcat(event, " 3");
 					system(event);
 				}else if (keycode == 642){
 					strcat(event, wheelEvents[wheelFunction + 3]);
+					strcat(event, " 3");
 					system(event);
 				}else{
 					for (int k = 0; k < 19; k++){
@@ -178,7 +188,7 @@ void GetDevice(int v, int p, int debug){
 							}else if (strcmp(events[k], "swap") == 0){
 								if (wheelFunction != 2){
 									wheelFunction++;
-									if (strcmp(wheelEvents[wheelFunction],"NULL") == 0){
+									if (strcmp(wheelEvents[wheelFunction], "NULL") == 0){
 										wheelFunction = 0;
 									}
 									if (debug == 1){

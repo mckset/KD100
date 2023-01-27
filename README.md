@@ -5,6 +5,11 @@ Installation
 ------------
 Download the latest version, unzip it, and run KD100
 
+Requirements
+------------
+- xdotool
+- > **_NOTE:_**  Will be removed in a future update
+
 Usage
 -----
 ```
@@ -21,7 +26,7 @@ Notes
 ```
 SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GROUP="plugdev"
 ```
-- The output executable is only there to prevent users from needing to download xdotool. Why is it not part of the main program? Every time it was added to the main program, it crashed without giving a reason
+- The output executable was meant to be a replacement for xdotool but ironically relies on it. It will be removed in a future update
 - Technically speaking, this can support other devices, especially if they send the same type of byte information, otherwise the code should be easy enough to edit and add support for other usb devices
 - New config files must have the same format and line count as the default file
 
@@ -36,4 +41,3 @@ Building From Source
 gcc -lusb-1.0 KD100.c -o KD100
 gcc -lxdo output.c -o output
 ```
-> **_NOTE:_**  Requires Libusb and Xdo

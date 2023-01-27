@@ -11,12 +11,15 @@ int main(int args, char *in[]){
 		}else{
 			xdo_mouse_down(x, CURRENTWINDOW, atoi(&in[1][5]));
 		}
-	}else{
+	}else if (strcmp(in[2], "1") == 0){
 		if (strcmp(in[1], "mouse1") != 0 &&	strcmp(in[1], "mouse2") != 0 && strcmp(in[1], "mouse3") != 0 && strcmp(in[1], "mouse4") != 0 && strcmp(in[1], "mouse5") != 0){
 			xdo_send_keysequence_window_up(x, CURRENTWINDOW, in[1], 0);
 		}else{
 			xdo_mouse_up(x, CURRENTWINDOW, atoi(&in[1][5]));
 		}
+	}else{
+		xdo_send_keysequence_window(x, CURRENTWINDOW, in[1], 0);
 	}
 	return 0;
 }
+

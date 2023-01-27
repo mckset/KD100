@@ -8,7 +8,7 @@ Download the latest version, unzip it, and run KD100
 Requirements
 ------------
 - xdotool
-- > **_NOTE:_**  Will be removed in a future update
+> **_NOTE:_**  Will be removed in a future update
 
 Usage
 -----

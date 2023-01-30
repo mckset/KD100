@@ -29,7 +29,7 @@ SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GR
 
 Known Issues
 ------------
-- Setting shortcuts like "ctrl+c" will close the driver if it ran from a terminal and is active
+- Setting shortcuts like "ctrl+c" will close the driver if it ran from a terminal and it active
 - The driver cannot trigger keyboard shortcuts from combining multiple buttons on the device
 > **_NOTE:_**  Because of how the data is packaged, there currently is no work around for this
 

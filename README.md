@@ -36,3 +36,6 @@ Known Issues
 Building From Source
 --------------------
 Clone the repo and run compile.sh
+
+--------------------
+Special thanks to the creator of [xdotool](https://github.com/jordansissel/xdotool). Even though this project is not dependant on the tool, it utilizes some of the xdo scripts from that project 

@@ -3,6 +3,9 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include "xdo.h"
+#include "xdo.c"
+
 int main(int args, char *in[]){
 	xdo_t *x = xdo_new(NULL);
 	if (strcmp(in[2], "0") == 0){
@@ -22,4 +25,3 @@ int main(int args, char *in[]){
 	}
 	return 0;
 }
-

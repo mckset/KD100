@@ -1,5 +1,5 @@
 /*
-	V1.2
+	V1.3
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
@@ -125,7 +125,7 @@ void GetDevice(int v, int p, int debug){
 			while (err >=0){
 				unsigned char data[40]; // Stores device input
 				int keycode = 0; // Keycode read from the device
-				char event[521] = "./output "; // Key command to be sent to the PC
+				char event[521] = "./handler "; // Key command to be sent to the PC
 				err = libusb_interrupt_transfer(handle, 0x81, data, sizeof(data), NULL, 0); // Get data
 				
 				// Potential errors			

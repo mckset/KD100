@@ -1,5 +1,5 @@
 /*
-	V1.3
+	V1.4
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
@@ -16,7 +16,9 @@ int keycodes[] = {1,2,4,8,16,32,64,128, 129, 130, 132, 136, 144, 160, 192, 256, 
 char file[4096] = "default.cfg";
 
 
-static void GetDevice(int, int, int);
+void GetDevice(int, int, int);
+void Handler(char*, int);
+
 
 void GetDevice(int v, int p, int debug){
 	libusb_device *dev; //USB device
@@ -81,6 +83,8 @@ void GetDevice(int v, int p, int debug){
 
 	i = 0;
 	char indi[] = "|/-\\";
+	int prevType = 0;
+	char prevKey[512];
 	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){
 		err=0;
 		// Open device and check if it is there
@@ -139,6 +143,8 @@ void GetDevice(int v, int p, int debug){
 					printf("\nOVERFLOW ERROR\n");
 				if (err == LIBUSB_ERROR_INVALID_PARAM)
 					printf("\nINVALID PARAMETERS\n");
+				if (err == -1)
+					printf("\nDRIVER IS ALREADY RUNNING\n");
 				if (err < 0){
 					if (debug == 1){
 						printf("Unable to retrieve data: %d\n", err);
@@ -160,31 +166,22 @@ void GetDevice(int v, int p, int debug){
 				if (debug == 1 && keycode != 0){
 					printf("Keycode: %d\n", keycode);
 				}
-				if (keycode == 0 && strlen(prevEvent) > 0){ // Reset key held
-					strcat(prevEvent, " 1");
-					system(prevEvent);
-					strcpy(prevEvent, "");
+				if (keycode == 0 && strlen(prevKey) > 0){ // Reset key held
+					Handler(prevKey, prevType);
 				}
 				if (keycode == 641){ // Wheel Clockwise
-					strcat(event, wheelEvents[wheelFunction]);
-					strcat(event, " 3");
-					system(event);
+					Handler(wheelEvents[wheelFunction], -1);
 				}else if (keycode == 642){
-					strcat(event, wheelEvents[wheelFunction + 3]);
-					strcat(event, " 3");
-					system(event);
+					Handler(wheelEvents[wheelFunction + 3], -1);
 				}else{
 					for (int k = 0; k < 19; k++){
 						if (keycodes[k] == keycode){
 							if (type[k] == 0){
-								strcat(event, events[k]);
-								if (strlen(prevEvent) > 0 && strcmp(event, prevEvent) != 0){
-									strcat(prevEvent, " 1");
-									system(prevEvent);
+								if (strcmp(events[k], prevKey)){
+									strcpy(prevKey, events[k]);
+									prevType=1;
 								}
-								strcpy(prevEvent, event);
-								strcat(event, " 0");
-								system(event);
+								Handler(events[k], 0);
 							}else if (strcmp(events[k], "swap") == 0){
 								if (wheelFunction != 2){
 									wheelFunction++;
@@ -197,14 +194,11 @@ void GetDevice(int v, int p, int debug){
 								}else
 									wheelFunction=0;
 							}else if (strcmp(events[k], "mouse1") == 0 || strcmp(events[k], "mouse2") == 0 || strcmp(events[k], "mouse3") == 0 || strcmp(events[k], "mouse4") == 0 || strcmp(events[k], "mouse5") == 0){
-								strcat(event, events[k]);
-								if (strlen(prevEvent) > 0 && strcmp(event, prevEvent) != 0){
-									strcat(prevEvent, " 1");
-									system(prevEvent);
+								if (strcmp(events[k], prevKey)){
+									strcpy(prevKey, events[k]);
+									prevType=3;
 								}
-								strcpy(prevEvent, event);
-								strcat(event, " 0");
-								system(event);	
+								Handler(events[k], 2);
 							}else{
 								system(events[k]);
 							}
@@ -222,6 +216,7 @@ void GetDevice(int v, int p, int debug){
 				}
 			}	
 
+			
 			// Cleanup
 			for (int x = 0; x<i; x++) {
 				if (debug == 1){
@@ -236,10 +231,38 @@ void GetDevice(int v, int p, int debug){
 	}
 }
 
+void Handler(char *key, int type){
+	char cmd[529] = "xdotool key";
+	if (type < 2){
+		if (type == 0){
+			strcat(cmd, "down");
+		}else if (type == 1){
+			strcat(cmd, "up");
+		}
+		strcat(cmd, " ");
+		strcat(cmd, key);
+	}else{
+		if (type == 2){
+			strcpy(cmd,"xdotool mousedown ");
+		}else if (type == 3){
+			strcpy(cmd,"xdotool mouseup ");
+		}
+		strcat(cmd, " ");
+		strcat(cmd, &key[5]);
+	}
+	system(cmd);
+}
 
 int main(int args, char *in[])
 {
-	int d=0;
+	int d=0, err;
+	
+	err = system("xdotool sleep 0.01");
+	if (err != 0){
+		printf("Exitting...\n");
+		return -1;
+	}
+
 	for (int arg = 1; arg < args; arg++){
 		if (strcmp(in[arg],"-d") == 0){
 			d++;
@@ -252,10 +275,8 @@ int main(int args, char *in[])
 		}
 	}
 
-
 	libusb_context **ctx;
-	int err;
-	
+
 	err = libusb_init(ctx);
 	if (err < 0){
 		printf("Error: %d\n", err);

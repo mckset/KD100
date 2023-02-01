@@ -1,5 +1,5 @@
 /*
-	V1.4
+	V1.0 - stable
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
@@ -11,24 +11,30 @@
 #include <stdlib.h>
 #include <string.h>
 #include<unistd.h>
+#include <pwd.h>
 
 int keycodes[] = {1,2,4,8,16,32,64,128, 129, 130, 132, 136, 144, 160, 192, 256, 257, 258, 260, 641, 642};
 char file[4096] = "default.cfg";
 
 
-void GetDevice(int, int, int);
+void GetDevice(int);
 void Handler(char*, int);
 
+const int vid = 0x256c;
+const int pid = 0x006d;
 
-void GetDevice(int v, int p, int debug){
+
+void GetDevice(int debug){
 	libusb_device *dev; //USB device
 	libusb_device_handle *handle; // USB handle
 	struct libusb_config_descriptor *desc; // USB descrition (For claiming interfaces)
 	int i = 0, err = 0, l = 0, subL = 0, wheelFunction = 0;
-	char data[512];
+	char data[4096];
 	int type[19];
 	char events[19][256];
 	char wheelEvents[6][256];
+	int prevType = 0;
+	char prevKey[256];
 	
 	system("clear");
 
@@ -42,12 +48,25 @@ void GetDevice(int v, int p, int debug){
 	if (debug == 1){
 		printf("Loading config...\n");
 	}
-	FILE *f = fopen(file, "r");
-	if (f == NULL){
-		printf("FILE NOT FOUND\n");
-		return;
+	FILE *f;
+	if (strcmp(file, "default.cfg")){
+		f = fopen(file, "r");
+		if (f == NULL){
+			printf("CONFIG FILE NOT FOUND\n");
+			return;
+		}
+	}else{
+		f = fopen(file, "r");
+		if (f == NULL){
+			strcpy(file, getpwuid(getuid())->pw_dir);
+			strcpy(file, "/.config/KD100/default.cfg");
+			FILE *f = fopen(file, "r");
+			if (f == NULL){
+				printf("DEFAULT CONFIGS ARE MISSING!\n");
+				printf("Please add default.cfg to %s/.config/KD100/ or specify a file to use with -c\n", getpwuid(getuid())->pw_dir);
+			}
+		}
 	}
-
 	while (fscanf(f, "%[^\n] ", data) == 1){
 		if (l > 19 && l <= 76){ // Button functions
 			if (subL == 0){
@@ -55,8 +74,13 @@ void GetDevice(int v, int p, int debug){
 				subL = 1;
 			}else if (subL == 1){
 				char func[256];
-				for (int d = 10; d < sizeof(data); d++){
-					func[d-10] = data[d];
+				if (strlen(data) < 256){
+					for (int d = 10; d < sizeof(data); d++){
+						func[d-10] = data[d];
+					}
+				}else{
+					strcpy(func, "NULL");
+					printf("Line: %d - Function length exceeded 256 characters. Ignoring %s\n", l, data);
 				}
 				strcpy(events[i], func);
 				subL = -1;
@@ -64,7 +88,7 @@ void GetDevice(int v, int p, int debug){
 			}else{
 				subL+=1;
 			}
-		}else if (l > 76){ // Wheel functions
+		}else if (l > 76 && l < 85){ // Wheel functions
 			if (subL < 3){
 				char func[256];
 				for (int d = 12; d < sizeof(data); d++){
@@ -83,12 +107,10 @@ void GetDevice(int v, int p, int debug){
 
 	i = 0;
 	char indi[] = "|/-\\";
-	int prevType = 0;
-	char prevKey[512];
 	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){
 		err=0;
 		// Open device and check if it is there
-		handle = libusb_open_device_with_vid_pid(NULL, v, p);		
+		handle = libusb_open_device_with_vid_pid(NULL, vid, pid);		
 		if (handle == NULL){
 			printf("\rWaiting for a device %c", indi[i]);
 			fflush(stdout);
@@ -124,12 +146,10 @@ void GetDevice(int v, int p, int debug){
 			}
 
 			// Listen for events
-			char prevEvent[521] = "";
 			printf("Driver is running!\n");
 			while (err >=0){
 				unsigned char data[40]; // Stores device input
 				int keycode = 0; // Keycode read from the device
-				char event[521] = "./handler "; // Key command to be sent to the PC
 				err = libusb_interrupt_transfer(handle, 0x81, data, sizeof(data), NULL, 0); // Get data
 				
 				// Potential errors			
@@ -166,8 +186,9 @@ void GetDevice(int v, int p, int debug){
 				if (debug == 1 && keycode != 0){
 					printf("Keycode: %d\n", keycode);
 				}
-				if (keycode == 0 && strlen(prevKey) > 0){ // Reset key held
+				if (keycode == 0 && prevType != 0){ // Reset key held
 					Handler(prevKey, prevType);
+					prevType = 0;
 				}
 				if (keycode == 641){ // Wheel Clockwise
 					Handler(wheelEvents[wheelFunction], -1);
@@ -176,6 +197,9 @@ void GetDevice(int v, int p, int debug){
 				}else{
 					for (int k = 0; k < 19; k++){
 						if (keycodes[k] == keycode){
+							if (strcmp(events[k], "NULL") == 0){
+								break;	
+							}
 							if (type[k] == 0){
 								if (strcmp(events[k], prevKey)){
 									strcpy(prevKey, events[k]);
@@ -268,9 +292,9 @@ int main(int args, char *in[])
 			d++;
 		}
 		if (strcmp(in[arg], "-c") == 0){
-			if (strlen(in[arg+1]) > 0 && strlen(in[arg+1]) < 4096){
-			strcpy(file, in[arg+1]);
-			arg++;
+			if (strlen(in[arg+1]) > 0){
+				strcpy(file, in[arg+1]);
+				arg++;
 			}
 		}
 	}
@@ -283,7 +307,7 @@ int main(int args, char *in[])
 		return err;
 	}
 	libusb_set_option(*ctx, LIBUSB_OPTION_LOG_LEVEL, 0);
-	GetDevice(0x256c, 0x006d, d);
+	GetDevice(d);
 	libusb_exit(*ctx);
 	return 0;
 }

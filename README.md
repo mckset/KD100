@@ -1,5 +1,17 @@
-# Huion KD100 Linux Driver [BETA]
+# Huion KD100 Linux Driver
 A simple driver for the Huion KD100 mini Keydial written in C to give the device some usability while waiting for Huion to fix their Linux drivers. Each button can be configured to either act as a key/multiple keys or to execute a program
+
+Pre-Installation
+------------
+Arch Linux:
+```
+sudo pacman -S libusb-1.0 xdotool
+```
+Ubuntu/Debian:
+```
+sudo apt-get install libusb-1.0 xdotool
+```
+> **_NOTE_**  Some distros label libusb as "libusb-1.0-0" and others might require the separate "libusb-1.0-dev" package
 
 Installation
 ------------
@@ -9,7 +21,6 @@ git clone https://github.com/mckset/KD100.git
 cd KD100
 make
 ```
-> **_NOTE_**  This driver depends on [xdotool](https://github.com/jordansissel/xdotool) to simulate keyboard and mouse inputs. It will not run if the tool is not installed. If you want to use a different tool, you can edit the Handler function to use that tool instead
 
 Usage
 -----
@@ -19,8 +30,6 @@ sudo ./KD100 -c config_file -d
 **-c**  Specify a config file (default.cfg is used normally)
 
 **-d**  Enable debug output (can be used twice to output the full packet of data recieved from the device)
-
-> **_KEEP IN MIND_**  Very few distros have been tested so far. If you have a problem on your distro, please report it and I will try to get to it as soon as possible
 
 Configuring
 ----------
@@ -37,6 +46,12 @@ SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GR
 - Sometimes the driver won't find the device and might require you to unplug it and plug it back in to fix it
 - Technically speaking, this can support other devices, especially if they send the same type of byte information, otherwise the code should be easy enough to edit and add support for other usb devices. If you want to see the information sent by different devices, change the vid and pid in the program and run it with two debug flags
 
+Tested Distros
+--------------
+- Arch linux
+- Manjaro
+- Ubuntu
+- Kali Linux
 
 Known Issues
 ------------

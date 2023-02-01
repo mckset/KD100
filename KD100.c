@@ -29,7 +29,7 @@ void GetDevice(int debug){
 	libusb_device_handle *handle; // USB handle
 	struct libusb_config_descriptor *desc; // USB descrition (For claiming interfaces)
 	int i = 0, err = 0, l = 0, subL = 0, wheelFunction = 0;
-	char data[4096];
+	char data[512];
 	int type[19];
 	char events[19][256];
 	char wheelEvents[6][256];
@@ -59,8 +59,8 @@ void GetDevice(int debug){
 		f = fopen(file, "r");
 		if (f == NULL){
 			strcpy(file, getpwuid(getuid())->pw_dir);
-			strcpy(file, "/.config/KD100/default.cfg");
-			FILE *f = fopen(file, "r");
+			strcat(file, "/.config/KD100/default.cfg");
+			f = fopen(file, "r");
 			if (f == NULL){
 				printf("DEFAULT CONFIGS ARE MISSING!\n");
 				printf("Please add default.cfg to %s/.config/KD100/ or specify a file to use with -c\n", getpwuid(getuid())->pw_dir);

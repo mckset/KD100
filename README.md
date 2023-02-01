@@ -11,7 +11,7 @@ Ubuntu/Debian:
 ```
 sudo apt-get install libusb-1.0 xdotool
 ```
-> **_NOTE_**  Some distros label libusb as "libusb-1.0-0" and others might require the separate "libusb-1.0-dev" package
+> **_NOTE:_**  Some distros label libusb as "libusb-1.0-0" and others might require the separate "libusb-1.0-dev" package
 
 Installation
 ------------
@@ -57,5 +57,5 @@ Known Issues
 ------------
 - Setting shortcuts like "ctrl+c" will close the driver if it ran from a terminal and it active
 - The driver cannot trigger keyboard shortcuts from combining multiple buttons on the device
-> **_NOTE:_**  Because of how the data is packaged, there currently is no work around for this
+> Because of how the data is packaged, there currently is no work around for this
 

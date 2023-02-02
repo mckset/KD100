@@ -186,7 +186,6 @@ void GetDevice(int debug){
 				if (debug == 1 && keycode != 0){
 					printf("Keycode: %d\n", keycode);
 				}
-				printf("prevType: %d\n", prevType);
 				if (keycode == 0 && prevType != 0){ // Reset key held
 					Handler(prevKey, prevType);
 					strcpy(prevKey, "");

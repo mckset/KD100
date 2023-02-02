@@ -1,5 +1,5 @@
 /*
-	V1.0 - stable
+	V1.1 - minor fix
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
@@ -186,9 +186,11 @@ void GetDevice(int debug){
 				if (debug == 1 && keycode != 0){
 					printf("Keycode: %d\n", keycode);
 				}
+				printf("prevType: %d\n", prevType);
 				if (keycode == 0 && prevType != 0){ // Reset key held
 					Handler(prevKey, prevType);
-					prevType = 0;
+					strcpy(prevKey, "");
+					prevType=0;
 				}
 				if (keycode == 641){ // Wheel Clockwise
 					Handler(wheelEvents[wheelFunction], -1);

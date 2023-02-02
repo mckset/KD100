@@ -1,5 +1,5 @@
 /*
-	V1.1 - minor fix
+	V1.2
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
@@ -41,7 +41,7 @@ void GetDevice(int debug){
 	if (debug > 0){
 		if (debug > 2)
 			debug=2;
-		printf("Debug level: %d\n", debug);
+		printf("Version 1.2\nDebug level: %d\n", debug);
 	}
 
 	// Load config file
@@ -64,6 +64,7 @@ void GetDevice(int debug){
 			if (f == NULL){
 				printf("DEFAULT CONFIGS ARE MISSING!\n");
 				printf("Please add default.cfg to %s/.config/KD100/ or specify a file to use with -c\n", getpwuid(getuid())->pw_dir);
+				return;
 			}
 		}
 	}
@@ -199,10 +200,18 @@ void GetDevice(int debug){
 					for (int k = 0; k < 19; k++){
 						if (keycodes[k] == keycode){
 							if (strcmp(events[k], "NULL") == 0){
+								if (prevType != 0){
+									Handler(prevKey, prevType);
+									prevType = 0;
+									strcpy(prevKey, "");
+								}
 								break;	
 							}
 							if (type[k] == 0){
 								if (strcmp(events[k], prevKey)){
+									if (prevType != 0){
+										Handler(prevKey, prevType);
+									}
 									strcpy(prevKey, events[k]);
 									prevType=1;
 								}
@@ -220,6 +229,9 @@ void GetDevice(int debug){
 									wheelFunction=0;
 							}else if (strcmp(events[k], "mouse1") == 0 || strcmp(events[k], "mouse2") == 0 || strcmp(events[k], "mouse3") == 0 || strcmp(events[k], "mouse4") == 0 || strcmp(events[k], "mouse5") == 0){
 								if (strcmp(events[k], prevKey)){
+									if (prevType != 0){
+										Handler(prevKey, prevType);
+									}
 									strcpy(prevKey, events[k]);
 									prevType=3;
 								}

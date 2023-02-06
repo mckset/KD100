@@ -8,6 +8,7 @@
 
 #include <libusb-1.0/libusb.h>
 #include <stdio.h>
+#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include<unistd.h>
@@ -110,8 +111,54 @@ void GetDevice(int debug){
 	char indi[] = "|/-\\";
 	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){
 		err=0;
-		// Open device and check if it is there
-		handle = libusb_open_device_with_vid_pid(NULL, vid, pid);		
+		int rc = 0;
+		unsigned char buffer[256];
+
+		libusb_device_handle *handle = NULL;
+
+		// discover devices
+		libusb_device **list;
+		ssize_t cnt = libusb_get_device_list(NULL, &list);
+		ssize_t i = 0;
+		int err = 0;
+		if (cnt < 0)
+			printf("Error while getting device list.\n");
+
+		for (i = 0; i < cnt; i++) {
+			libusb_device *device = list[i];
+            struct libusb_device_descriptor desc = {0};
+
+			rc = libusb_get_device_descriptor(device, &desc);
+			assert(rc == 0);
+
+			if (desc.idVendor == vid && desc.idProduct == pid) {
+				unsigned char product[200] = "";
+
+				printf("Vendor:Device = %04x:%04x\n", desc.idVendor, desc.idProduct);
+
+				err = libusb_open(device, &handle);
+				if (err)
+					printf("Error opening device\n");
+
+				libusb_get_string_descriptor_ascii(handle, desc.iProduct, product,200);
+
+				if (debug)
+					printf("Product description: %s, length: %lu\n", product, strlen((char*)product));
+
+				// KD100 has empty description
+				// or I don't know how to identify it better
+				if ( strlen((char*)product) == 0 ) {
+					printf("FOUND\n");
+					break;
+				} else {
+					libusb_close(handle);
+					handle = NULL;
+				}
+			}
+		}
+
+		libusb_free_device_list(list, 1);
+
 		if (handle == NULL){
 			printf("\rWaiting for a device %c", indi[i]);
 			fflush(stdout);

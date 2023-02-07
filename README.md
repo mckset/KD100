@@ -1,5 +1,5 @@
 # Huion KD100 Linux Driver
-A simple driver for the Huion KD100 mini Keydial written in C to give the device some usability while waiting for Huion to fix their Linux drivers. Each button can be configured to either act as a key/multiple keys or to execute a program
+A simple driver for the Huion KD100 mini Keydial written in C to give the device some usability while waiting for Huion to fix their Linux drivers. Each button can be configured to either act as a key/multiple keys or to execute a program/command
 
 Pre-Installation
 ------------
@@ -55,7 +55,7 @@ Tested Distros
 
 Known Issues
 ------------
-- Setting shortcuts like "ctrl+c" will close the driver if it ran from a terminal and it active
+- Setting shortcuts like "ctrl+c" will close the driver if it ran from a terminal and it's active
 - The driver cannot trigger keyboard shortcuts from combining multiple buttons on the device
 > Because of how the data is packaged, there currently is no work around for this
 

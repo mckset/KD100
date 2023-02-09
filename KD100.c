@@ -10,7 +10,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+#include<unistd.h>
 #include <pwd.h>
 
 int keycodes[] = {1, 2, 4, 8, 16, 32, 64, 128, 129, 130, 132, 136, 144, 160, 192, 256, 257, 258, 260, 641, 642};
@@ -25,10 +25,6 @@ const int pid = 0x006d;
 
 
 void GetDevice(int debug, int accept){
-	libusb_device **devs; // List of USB devices
-	libusb_device *dev; // Selected USB device
-	libusb_device_handle *handle; // USB handle
-	struct libusb_config_descriptor *desc; // USB descrition (For claiming interfaces)
 	int i=0, err=0, l=0, subL=0, wheelFunction=0, c=0;
 	char data[512]; // Data received from the config file and the USB
 	int type[19]; // Stores the button type
@@ -111,6 +107,11 @@ void GetDevice(int debug, int accept){
 	i = 0;
 	char indi[] = "|/-\\";
 	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){
+		libusb_device **devs; // List of USB devices
+		libusb_device *dev; // Selected USB device
+		struct libusb_config_descriptor *desc; // USB descrition (For claiming interfaces)
+		libusb_device_handle *handle = NULL; // USB handle
+
 		err = libusb_get_device_list(NULL, &devs);
 		if (err < 0){
 			printf("Unable to retrieve USB devices. Exitting...\n");
@@ -131,17 +132,29 @@ void GetDevice(int debug, int accept){
 				}
 			}else if (devDesc.idVendor == vid && devDesc.idProduct == pid){
 				if (accept == 1){
-					libusb_open(dev, &handle);
+					err=libusb_open(dev, &handle);
+					if (err < 0){
+						printf("\nUnable to open device. Error: %d\n", err);
+						handle=NULL;
+						if (err == LIBUSB_ERROR_ACCESS){
+							printf("Error: Permission denied\n");
+							return;
+						}
+					}
 					if (debug > 0){
-						printf("Using: %04x:%04x (Bus: %03d Device: %03d)\n", vid, pid, libusb_get_bus_number(dev), libusb_get_device_address(dev));
+						printf("\nUsing: %04x:%04x (Bus: %03d Device: %03d)\n", vid, pid, libusb_get_bus_number(dev), libusb_get_device_address(dev));
 					}
 					break;
 				}else{
 					if (uid == 0){ // If the driver is ran as root, it can safely execute the following
-						libusb_open(dev, &handle);
+						err = libusb_open(dev, &handle);
+						if (err < 0){
+							printf("\nUnable to open device. Error: %d\n", err);
+							handle=NULL;
+						}
 						err = libusb_get_string_descriptor_ascii(handle, devDesc.iProduct, info, 200);
 						if (debug > 0){
-							printf("#%d | %04x:%04x : %s\n", d, vid, pid, info);
+							printf("\n#%d | %04x:%04x : %s\n", d, vid, pid, info);
 						}
 						if (strlen(info) == 0){
 							break;
@@ -161,6 +174,7 @@ void GetDevice(int debug, int accept){
 			int in=-1;
 			while(in == -1){
 				char buf[64];
+				printf("\n");
 				system("lsusb");
 				printf("\n");
 				for(d=0; d < i; d++){
@@ -175,13 +189,18 @@ void GetDevice(int debug, int accept){
 				}
 				system("clear");
 			}
-			libusb_open(savedDevs[in], &handle);
+			err=libusb_open(savedDevs[in], &handle);
+			if (err < 0){
+				printf("Unable to open device. Error: %d\n", err);
+				handle=NULL;
+				if (err == LIBUSB_ERROR_ACCESS){
+					printf("Error: Permission denied\n");
+					return;
+				}
+			}
 		}
 
-		if (err == LIBUSB_ERROR_ACCESS){
-			printf("Error: Permission denied\n");
-			return;
-		}
+		
 
 		i=0;
 		if (handle == NULL){
@@ -221,7 +240,7 @@ void GetDevice(int debug, int accept){
 			err = 0;
 			// Listen for events
 			printf("Driver is running!\n");
-		}
+		
 		while (err >=0){
 			unsigned char data[40]; // Stores device input
 			int keycode = 0; // Keycode read from the device
@@ -329,7 +348,7 @@ void GetDevice(int debug, int accept){
 
 
 		// Cleanup
-		if (handle != NULL){
+
 			for (int x = 0; x<i; x++) {
 				if (debug == 1){
 					printf("Releasing interface %d...\n", x);
@@ -339,6 +358,7 @@ void GetDevice(int debug, int accept){
 			printf("Closing device...\n");
 			libusb_close(handle);
 			i=0;
+			sleep(1); // Buffer to wait in case the device was disconnected
 		}
 	}
 }

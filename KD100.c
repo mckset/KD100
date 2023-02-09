@@ -382,7 +382,7 @@ int main(int args, char *in[])
 			printf("\t-a\t\tAssume the first device that matches %04x:%04x is the Keydial\n", vid, pid);
 			printf("\t-c [path]\tSpecifies a config file to use\n");
 			printf("\t-d [-d]\t\tEnable debug outputs (use twice to view data sent by the device)\n");
-			printf("\t-h\t\tDisplays this message\n");
+			printf("\t-h\t\tDisplays this message\n\n");
 			return 0;
 		}
 		if (strcmp(in[arg],"-d") == 0){

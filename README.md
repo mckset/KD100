@@ -25,15 +25,19 @@ make
 Usage
 -----
 ```
-sudo ./KD100 -c config_file -d
+sudo ./KD100 [options]
 ```
-**-c**  Specify a config file (default.cfg is used normally)
+**-a**  Assume that the first device that matches the vid and pid is the keydial
+
+**-c**  Specify a config file to use after the flag (./default.cfg or ~/.config/KD100/default.cfg is used normally)
 
 **-d**  Enable debug output (can be used twice to output the full packet of data recieved from the device)
 
+**-h**  Displays a help message
+
 Configuring
 ----------
-Edit or copy **default.cfg** to add your own keys/commands 
+Edit or copy **default.cfg** to add your own keys/commands and use the '-c' flag to specify the location of the config file
 > **_NOTE:_**  New config files must have the same format and line count as the default file
 
 Caveats
@@ -43,7 +47,7 @@ Caveats
 ```
 SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GROUP="plugdev"
 ```
-- Sometimes the driver won't find the device and might require you to unplug it and plug it back in to fix it
+- If the driver is ran as a user and the '-a' flag is not used, you will need to select the device to use during startup
 - Technically speaking, this can support other devices, especially if they send the same type of byte information, otherwise the code should be easy enough to edit and add support for other usb devices. If you want to see the information sent by different devices, change the vid and pid in the program and run it with two debug flags
 
 Tested Distros

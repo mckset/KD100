@@ -17,27 +17,27 @@ int keycodes[] = {1, 2, 4, 8, 16, 32, 64, 128, 129, 130, 132, 136, 144, 160, 192
 char file[4096] = "default.cfg";
 
 
-void GetDevice(int);
+void GetDevice(int, int);
 void Handler(char*, int);
 
 const int vid = 0x256c;
 const int pid = 0x006d;
 
 
-void GetDevice(int debug){
+void GetDevice(int debug, int accept){
 	libusb_device **devs; // List of USB devices
 	libusb_device *dev; // Selected USB device
 	libusb_device_handle *handle; // USB handle
 	struct libusb_config_descriptor *desc; // USB descrition (For claiming interfaces)
-	int i = 0, err = 0, l = 0, subL = 0, wheelFunction = 0;
+	int i=0, err=0, l=0, subL=0, wheelFunction=0, c=0;
 	char data[512]; // Data received from the config file and the USB
 	int type[19]; // Stores the button type
 	char events[19][256]; // Stores the button event key/function
 	char wheelEvents[6][256]; // Stores the wheel keys
-	int prevType = 0; 
+	int prevType = 0; // prevKey function type
 	char prevKey[256]; // Stores the previous event to release held keys
 	uid_t uid=getuid(); // Used to check if the driver was ran as root
-	
+
 	system("clear");
 
 	if (debug > 0){
@@ -110,21 +110,17 @@ void GetDevice(int debug){
 
 	i = 0;
 	char indi[] = "|/-\\";
-	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){		
+	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){
 		err = libusb_get_device_list(NULL, &devs);
 		if (err < 0){
 			printf("Unable to retrieve USB devices. Exitting...\n");
 			return;
 		}
 
-		/* Checks for the first device that matches the vid	
-			and pid and only claims the device without a description
-			as the Keydial does not have one while other Huion devices
-			share the same vid and pid but have a description */
-		
+		// Gets a list of devices and looks for ones that have the same vid and pid
 		int d=0;
 		i=0;
-		libusb_device *savedDevs[sizeof(devs)]; 
+		libusb_device *savedDevs[sizeof(devs)];
 		while ((dev = devs[d++]) != NULL){
 			struct libusb_device_descriptor devDesc;
 			unsigned char info[200] = "";
@@ -134,38 +130,43 @@ void GetDevice(int debug){
 					printf("Unable to retrieve info from device #%d. Ignoring...\n", d);
 				}
 			}else if (devDesc.idVendor == vid && devDesc.idProduct == pid){
-				if (uid == 0){ // If the driver is ran as root, it can safely execute the following
+				if (accept == 1){
 					libusb_open(dev, &handle);
-					err = libusb_get_string_descriptor_ascii(handle, devDesc.iProduct, info, 200);
 					if (debug > 0){
-						printf("#%d | %04x:%04x : %s\n", d, vid, pid, info);
+						printf("Using: %04x:%04x (Bus: %03d Device: %03d)\n", vid, pid, libusb_get_bus_number(dev), libusb_get_device_address(dev));
 					}
-					if (strlen(info) == 0){
-						break;
-					}else{
-						libusb_close(handle);
-						handle = NULL;
-					}
+					break;
 				}else{
-					savedDevs[i] = dev;
-					i++;
+					if (uid == 0){ // If the driver is ran as root, it can safely execute the following
+						libusb_open(dev, &handle);
+						err = libusb_get_string_descriptor_ascii(handle, devDesc.iProduct, info, 200);
+						if (debug > 0){
+							printf("#%d | %04x:%04x : %s\n", d, vid, pid, info);
+						}
+						if (strlen(info) == 0){
+							break;
+						}else{
+							libusb_close(handle);
+							handle = NULL;
+						}
+					}else{
+						savedDevs[i] = dev;
+						i++;
+					}
 				}
 			}
 		}
 
-		if (i == 1){ // If ran as a regular user
-			err=libusb_open(savedDevs[i-1], &handle);
-		}else if (i > 1){
+		if (i > 0){
 			int in=-1;
 			while(in == -1){
 				char buf[64];
-				printf("Multiple devices with the same ID have been found!\n");
 				system("lsusb");
 				printf("\n");
 				for(d=0; d < i; d++){
 					printf("%d) %04x:%04x (Bus: %03d Device: %03d)\n", d, vid, pid, libusb_get_bus_number(savedDevs[d]), libusb_get_device_address(savedDevs[d]));
-				} 
-				printf("Select a device to use: ");				
+				}
+				printf("Select a device to use: ");
 				fflush(stdout);
 				fgets(buf, 10, stdin);
 				in = atoi(buf);
@@ -173,7 +174,6 @@ void GetDevice(int debug){
 					in=-1;
 				}
 				system("clear");
-				printf("%d\n", in);
 			}
 			libusb_open(savedDevs[in], &handle);
 		}
@@ -185,161 +185,162 @@ void GetDevice(int debug){
 
 		i=0;
 		if (handle == NULL){
-			printf("\rWaiting for a device %c", indi[i]);
+			printf("\rWaiting for a device %c", indi[c]);
 			fflush(stdout);
 			usleep(250000); // Buffer
-			i++;
-			if (i == 4){
-				i=0;
+			c++;
+			if (c == 4){
+				c=0;
 			}
 			err = LIBUSB_ERROR_NO_DEVICE;
 		}else{ // Claims the device and starts the driver
-				if (debug == 0){
-					system("clear");
-				}
-
-				i = 0;
-				if (debug == 1)
-					printf("Device found...\n");
-				printf("Starting driver...\n");
-
-				// Read device and claim interfaces
-				dev = libusb_get_device(handle);
-				libusb_get_config_descriptor(dev, 0, &desc);
-				i = desc->bNumInterfaces;
-				libusb_free_config_descriptor(desc);
-				libusb_set_auto_detach_kernel_driver(handle, 1);
-				if (debug == 1)
-					printf("Claiming interfaces... \n");
-
-				for (int x = 0; x < i; x++){
-					libusb_kernel_driver_active(handle, x);
-					int err = libusb_claim_interface(handle, x);
-					if (err != LIBUSB_SUCCESS && debug == 1) 
-						printf("Failed to claim interface %d\n", x);
-				}
-				
+			if (debug == 0){
+				system("clear");
 			}
+
+			i = 0;
+			printf("Starting driver...\n");
+
+			// Read device and claim interfaces
+			dev = libusb_get_device(handle);
+			libusb_get_config_descriptor(dev, 0, &desc);
+			i = desc->bNumInterfaces;
+			libusb_free_config_descriptor(desc);
+			libusb_set_auto_detach_kernel_driver(handle, 1);
+			if (debug == 1)
+				printf("Claiming interfaces... \n");
+
+			for (int x = 0; x < i; x++){
+				libusb_kernel_driver_active(handle, x);
+				int err = libusb_claim_interface(handle, x);
+				if (err != LIBUSB_SUCCESS && debug == 1)
+					printf("Failed to claim interface %d\n", x);
+			}
+
+
 			err = 0;
 			// Listen for events
 			printf("Driver is running!\n");
-			while (err >=0){
-				unsigned char data[40]; // Stores device input
-				int keycode = 0; // Keycode read from the device
-				err = libusb_interrupt_transfer(handle, 0x81, data, sizeof(data), NULL, 0); // Get data
-				
-				// Potential errors			
-				if (err == LIBUSB_ERROR_TIMEOUT)
-					printf("\nTIMEDOUT\n");
-				if (err == LIBUSB_ERROR_PIPE)
-					printf("\nPIPE ERROR\n");
-				if (err == LIBUSB_ERROR_NO_DEVICE)
-					printf("\nDEVICE DISCONNECTED\n");
-				if (err == LIBUSB_ERROR_OVERFLOW)
-					printf("\nOVERFLOW ERROR\n");
-				if (err == LIBUSB_ERROR_INVALID_PARAM)
-					printf("\nINVALID PARAMETERS\n");
-				if (err == -1)
-					printf("\nDEVICE IS ALREADY IN USE\n");
-				if (err < 0){
-					if (debug == 1){
-						printf("Unable to retrieve data: %d\n", err);
-					}			
-					break;		
-				}
+		}
+		while (err >=0){
+			unsigned char data[40]; // Stores device input
+			int keycode = 0; // Keycode read from the device
+			err = libusb_interrupt_transfer(handle, 0x81, data, sizeof(data), NULL, 0); // Get data
 
-				// Convert data to keycodes
-				if (data[4] != 0)
-					keycode = data[4];
-				else if (data[5] != 0)
-					keycode = data[5] + 128;
-				else if (data[6] != 0)
-					keycode = data[6] + 256;
-				if (data[1] == 241)
-					keycode+=512;
+			// Potential errors
+			if (err == LIBUSB_ERROR_TIMEOUT)
+				printf("\nTIMEDOUT\n");
+			if (err == LIBUSB_ERROR_PIPE)
+				printf("\nPIPE ERROR\n");
+			if (err == LIBUSB_ERROR_NO_DEVICE)
+				printf("\nDEVICE DISCONNECTED\n");
+			if (err == LIBUSB_ERROR_OVERFLOW)
+				printf("\nOVERFLOW ERROR\n");
+			if (err == LIBUSB_ERROR_INVALID_PARAM)
+				printf("\nINVALID PARAMETERS\n");
+			if (err == -1)
+				printf("\nDEVICE IS ALREADY IN USE\n");
+			if (err < 0){
+				if (debug == 1){
+					printf("Unable to retrieve data: %d\n", err);
+				}
+				break;
+			}
 
-				// Compare keycodes to data and trigger events
-				if (debug == 1 && keycode != 0){
-					printf("Keycode: %d\n", keycode);
-				}
-				if (keycode == 0 && prevType != 0){ // Reset key held
-					Handler(prevKey, prevType);
-					strcpy(prevKey, "");
-					prevType=0;
-				}
-				if (keycode == 641){ // Wheel Clockwise
-					Handler(wheelEvents[wheelFunction], -1);
-				}else if (keycode == 642){
-					Handler(wheelEvents[wheelFunction + 3], -1);
-				}else{
-					for (int k = 0; k < 19; k++){
-						if (keycodes[k] == keycode){
-							if (strcmp(events[k], "NULL") == 0){
-								if (prevType != 0){
-									Handler(prevKey, prevType);
-									prevType = 0;
-									strcpy(prevKey, "");
-								}
-								break;	
-							}
-							if (type[k] == 0){
-								if (strcmp(events[k], prevKey)){
-									if (prevType != 0){
-										Handler(prevKey, prevType);
-									}
-									strcpy(prevKey, events[k]);
-									prevType=1;
-								}
-								Handler(events[k], 0);
-							}else if (strcmp(events[k], "swap") == 0){
-								if (wheelFunction != 2){
-									wheelFunction++;
-									if (strcmp(wheelEvents[wheelFunction], "NULL") == 0){
-										wheelFunction = 0;
-									}
-									if (debug == 1){
-										printf("Function: %s\n", wheelEvents[wheelFunction]);
-									}
-								}else
-									wheelFunction=0;
-							}else if (strcmp(events[k], "mouse1") == 0 || strcmp(events[k], "mouse2") == 0 || strcmp(events[k], "mouse3") == 0 || strcmp(events[k], "mouse4") == 0 || strcmp(events[k], "mouse5") == 0){
-								if (strcmp(events[k], prevKey)){
-									if (prevType != 0){
-										Handler(prevKey, prevType);
-									}
-									strcpy(prevKey, events[k]);
-									prevType=3;
-								}
-								Handler(events[k], 2);
-							}else{
-								system(events[k]);
+			// Convert data to keycodes
+			if (data[4] != 0)
+				keycode = data[4];
+			else if (data[5] != 0)
+				keycode = data[5] + 128;
+			else if (data[6] != 0)
+				keycode = data[6] + 256;
+			if (data[1] == 241)
+				keycode+=512;
+
+			// Compare keycodes to data and trigger events
+			if (debug == 1 && keycode != 0){
+				printf("Keycode: %d\n", keycode);
+			}
+			if (keycode == 0 && prevType != 0){ // Reset key held
+				Handler(prevKey, prevType);
+				strcpy(prevKey, "");
+				prevType=0;
+			}
+			if (keycode == 641){ // Wheel Clockwise
+				Handler(wheelEvents[wheelFunction], -1);
+			}else if (keycode == 642){
+				Handler(wheelEvents[wheelFunction + 3], -1);
+			}else{
+				for (int k = 0; k < 19; k++){
+					if (keycodes[k] == keycode){
+						if (strcmp(events[k], "NULL") == 0){
+							if (prevType != 0){
+								Handler(prevKey, prevType);
+								prevType = 0;
+								strcpy(prevKey, "");
 							}
 							break;
 						}
+						if (type[k] == 0){
+							if (strcmp(events[k], prevKey)){
+								if (prevType != 0){
+									Handler(prevKey, prevType);
+								}
+								strcpy(prevKey, events[k]);
+								prevType=1;
+							}
+							Handler(events[k], 0);
+						}else if (strcmp(events[k], "swap") == 0){
+							if (wheelFunction != 2){
+								wheelFunction++;
+								if (strcmp(wheelEvents[wheelFunction], "NULL") == 0){
+									wheelFunction = 0;
+								}
+								if (debug == 1){
+									printf("Function: %s\n", wheelEvents[wheelFunction]);
+								}
+							}else
+								wheelFunction=0;
+						}else if (strcmp(events[k], "mouse1") == 0 || strcmp(events[k], "mouse2") == 0 || strcmp(events[k], "mouse3") == 0 || strcmp(events[k], "mouse4") == 0 || strcmp(events[k], "mouse5") == 0){
+							if (strcmp(events[k], prevKey)){
+								if (prevType != 0){
+									Handler(prevKey, prevType);
+								}
+								strcpy(prevKey, events[k]);
+								prevType=3;
+							}
+							Handler(events[k], 2);
+						}else{
+							system(events[k]);
+						}
+						break;
 					}
 				}
+			}
 
-				if(debug == 2){
-					printf("DATA: [%d", data[0]);
-					for (int i = 1; i < sizeof(data); i++){
-						printf(", %d", data[i]);
-					}
-					printf("]\n");
+			if(debug == 2){
+				printf("DATA: [%d", data[0]);
+				for (int i = 1; i < sizeof(data); i++){
+					printf(", %d", data[i]);
 				}
-			}	
+				printf("]\n");
+			}
+		}
 
-			
-			// Cleanup
+
+		// Cleanup
+		if (handle != NULL){
 			for (int x = 0; x<i; x++) {
 				if (debug == 1){
 					printf("Releasing interface %d...\n", x);
-				}				
+				}
 				libusb_release_interface(handle, x);
 			}
 			printf("Closing device...\n");
 			libusb_close(handle);
 			i=0;
-	}	
+		}
+	}
 }
 
 
@@ -367,8 +368,8 @@ void Handler(char *key, int type){
 
 int main(int args, char *in[])
 {
-	int d=0, err;
-	
+	int d=0, a=0, err;
+
 	err = system("xdotool sleep 0.01");
 	if (err != 0){
 		printf("Exitting...\n");
@@ -376,8 +377,19 @@ int main(int args, char *in[])
 	}
 
 	for (int arg = 1; arg < args; arg++){
+		if (strcmp(in[arg],"-h") == 0 || strcmp(in[arg],"--help") == 0){
+			printf("Usage: KD100 [option]...\n");
+			printf("\t-a\t\tAssume the first device that matches %04x:%04x is the Keydial\n", vid, pid);
+			printf("\t-c [path]\tSpecifies a config file to use\n");
+			printf("\t-d [-d]\t\tEnable debug outputs (use twice to view data sent by the device)\n");
+			printf("\t-h\t\tDisplays this message\n");
+			return 0;
+		}
 		if (strcmp(in[arg],"-d") == 0){
 			d++;
+		}
+		if (strcmp(in[arg],"-a") == 0){
+			a=1;
 		}
 		if (strcmp(in[arg], "-c") == 0){
 			if (strlen(in[arg+1]) > 0){
@@ -395,7 +407,7 @@ int main(int args, char *in[])
 		return err;
 	}
 	libusb_set_option(*ctx, LIBUSB_OPTION_LOG_LEVEL, 0);
-	GetDevice(d);
+	GetDevice(d, a);
 	libusb_exit(*ctx);
 	return 0;
 }

@@ -27,7 +27,7 @@ Usage
 ```
 sudo ./KD100 [options]
 ```
-**-a**  Assume that the first device that matches the vid and pid is the keydial
+**-a**  Assume that the first device that matches the vid and pid is the keydial (skips prompt to select a device)
 
 **-c**  Specify a config file to use after the flag (./default.cfg or ~/.config/KD100/default.cfg is used normally)
 

@@ -1,5 +1,5 @@
 /*
-	V1.2
+	V1.3
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
@@ -13,7 +13,7 @@
 #include<unistd.h>
 #include <pwd.h>
 
-int keycodes[] = {1,2,4,8,16,32,64,128, 129, 130, 132, 136, 144, 160, 192, 256, 257, 258, 260, 641, 642};
+int keycodes[] = {1, 2, 4, 8, 16, 32, 64, 128, 129, 130, 132, 136, 144, 160, 192, 256, 257, 258, 260, 641, 642};
 char file[4096] = "default.cfg";
 
 
@@ -25,23 +25,25 @@ const int pid = 0x006d;
 
 
 void GetDevice(int debug){
-	libusb_device *dev; //USB device
+	libusb_device **devs; // List of USB devices
+	libusb_device *dev; // Selected USB device
 	libusb_device_handle *handle; // USB handle
 	struct libusb_config_descriptor *desc; // USB descrition (For claiming interfaces)
 	int i = 0, err = 0, l = 0, subL = 0, wheelFunction = 0;
-	char data[512];
-	int type[19];
-	char events[19][256];
-	char wheelEvents[6][256];
-	int prevType = 0;
-	char prevKey[256];
+	char data[512]; // Data received from the config file and the USB
+	int type[19]; // Stores the button type
+	char events[19][256]; // Stores the button event key/function
+	char wheelEvents[6][256]; // Stores the wheel keys
+	int prevType = 0; 
+	char prevKey[256]; // Stores the previous event to release held keys
+	uid_t uid=getuid(); // Used to check if the driver was ran as root
 	
 	system("clear");
 
 	if (debug > 0){
 		if (debug > 2)
 			debug=2;
-		printf("Version 1.2\nDebug level: %d\n", debug);
+		printf("Version 1.3\nDebug level: %d\n", debug);
 	}
 
 	// Load config file
@@ -108,44 +110,117 @@ void GetDevice(int debug){
 
 	i = 0;
 	char indi[] = "|/-\\";
-	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){
-		err=0;
-		// Open device and check if it is there
-		handle = libusb_open_device_with_vid_pid(NULL, vid, pid);		
+	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){		
+		err = libusb_get_device_list(NULL, &devs);
+		if (err < 0){
+			printf("Unable to retrieve USB devices. Exitting...\n");
+			return;
+		}
+
+		/* Checks for the first device that matches the vid	
+			and pid and only claims the device without a description
+			as the Keydial does not have one while other Huion devices
+			share the same vid and pid but have a description */
+		
+		int d=0;
+		i=0;
+		libusb_device *savedDevs[sizeof(devs)]; 
+		while ((dev = devs[d++]) != NULL){
+			struct libusb_device_descriptor devDesc;
+			unsigned char info[200] = "";
+			err = libusb_get_device_descriptor(dev, &devDesc);
+			if (err < 0){
+				if (debug > 0){
+					printf("Unable to retrieve info from device #%d. Ignoring...\n", d);
+				}
+			}else if (devDesc.idVendor == vid && devDesc.idProduct == pid){
+				if (uid == 0){ // If the driver is ran as root, it can safely execute the following
+					libusb_open(dev, &handle);
+					err = libusb_get_string_descriptor_ascii(handle, devDesc.iProduct, info, 200);
+					if (debug > 0){
+						printf("#%d | %04x:%04x : %s\n", d, vid, pid, info);
+					}
+					if (strlen(info) == 0){
+						break;
+					}else{
+						libusb_close(handle);
+						handle = NULL;
+					}
+				}else{
+					savedDevs[i] = dev;
+					i++;
+				}
+			}
+		}
+
+		if (i == 1){ // If ran as a regular user
+			err=libusb_open(savedDevs[i-1], &handle);
+		}else if (i > 1){
+			int in=-1;
+			while(in == -1){
+				char buf[64];
+				printf("Multiple devices with the same ID have been found!\n");
+				system("lsusb");
+				printf("\n");
+				for(d=0; d < i; d++){
+					printf("%d) %04x:%04x (Bus: %03d Device: %03d)\n", d, vid, pid, libusb_get_bus_number(savedDevs[d]), libusb_get_device_address(savedDevs[d]));
+				} 
+				printf("Select a device to use: ");				
+				fflush(stdout);
+				fgets(buf, 10, stdin);
+				in = atoi(buf);
+				if (in >= i || in < 0){
+					in=-1;
+				}
+				system("clear");
+				printf("%d\n", in);
+			}
+			libusb_open(savedDevs[in], &handle);
+		}
+
+		if (err == LIBUSB_ERROR_ACCESS){
+			printf("Error: Permission denied\n");
+			return;
+		}
+
+		i=0;
 		if (handle == NULL){
 			printf("\rWaiting for a device %c", indi[i]);
 			fflush(stdout);
-			usleep(250000);
+			usleep(250000); // Buffer
 			i++;
 			if (i == 4){
 				i=0;
 			}
-		}else{
-			if (debug == 0){
-				system("clear");
+			err = LIBUSB_ERROR_NO_DEVICE;
+		}else{ // Claims the device and starts the driver
+				if (debug == 0){
+					system("clear");
+				}
+
+				i = 0;
+				if (debug == 1)
+					printf("Device found...\n");
+				printf("Starting driver...\n");
+
+				// Read device and claim interfaces
+				dev = libusb_get_device(handle);
+				libusb_get_config_descriptor(dev, 0, &desc);
+				i = desc->bNumInterfaces;
+				libusb_free_config_descriptor(desc);
+				libusb_set_auto_detach_kernel_driver(handle, 1);
+				if (debug == 1)
+					printf("Claiming interfaces... \n");
+
+				for (int x = 0; x < i; x++){
+					libusb_kernel_driver_active(handle, x);
+					int err = libusb_claim_interface(handle, x);
+					if (err != LIBUSB_SUCCESS && debug == 1) 
+						printf("Failed to claim interface %d\n", x);
+				}
+				
 			}
-
-			i = 0;
-			if (debug == 1)
-				printf("Device found...\n");
-			printf("Starting driver...\n");
-
-			// Read device and claim interfaces
-			dev = libusb_get_device(handle);
-			libusb_get_config_descriptor(dev, 0, &desc);
-			i = desc->bNumInterfaces;
-			libusb_free_config_descriptor(desc);
-			libusb_set_auto_detach_kernel_driver(handle, 1);
-			if (debug == 1)
-				printf("Claiming interfaces... \n");
-
-			for (int x = 0; x < i; x++){
-				libusb_kernel_driver_active(handle, x);
-				int err = libusb_claim_interface(handle, x);
-				if (err != LIBUSB_SUCCESS && debug == 1) 
-					printf("Failed to claim interface %d\n", x);
-			}
-
+			err = 0;
 			// Listen for events
 			printf("Driver is running!\n");
 			while (err >=0){
@@ -165,7 +240,7 @@ void GetDevice(int debug){
 				if (err == LIBUSB_ERROR_INVALID_PARAM)
 					printf("\nINVALID PARAMETERS\n");
 				if (err == -1)
-					printf("\nDRIVER IS ALREADY RUNNING\n");
+					printf("\nDEVICE IS ALREADY IN USE\n");
 				if (err < 0){
 					if (debug == 1){
 						printf("Unable to retrieve data: %d\n", err);
@@ -264,9 +339,9 @@ void GetDevice(int debug){
 			printf("Closing device...\n");
 			libusb_close(handle);
 			i=0;
-		}	
-	}
+	}	
 }
+
 
 void Handler(char *key, int type){
 	char cmd[529] = "xdotool key";

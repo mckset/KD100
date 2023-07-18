@@ -1,5 +1,5 @@
 /*
-	V1.3
+	V1.31
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
@@ -39,7 +39,7 @@ void GetDevice(int debug, int accept){
 	if (debug > 0){
 		if (debug > 2)
 			debug=2;
-		printf("Version 1.3\nDebug level: %d\n", debug);
+		printf("Version 1.31\nDebug level: %d\n", debug);
 	}
 
 	// Load config file
@@ -426,7 +426,8 @@ int main(int args, char *in[])
 		printf("Error: %d\n", err);
 		return err;
 	}
-	libusb_set_option(*ctx, LIBUSB_OPTION_LOG_LEVEL, 0);
+	// Uncomment for more detailed debugging (might crash when using older version of libusb)
+	//libusb_set_option(*ctx, LIBUSB_OPTION_LOG_LEVEL, 0);
 	GetDevice(d, a);
 	libusb_exit(*ctx);
 	return 0;

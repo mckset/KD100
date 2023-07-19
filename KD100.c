@@ -101,19 +101,31 @@ void GetDevice(int debug, int accept, int dry){
 				if (!wheelType)
 					events[b].function = Substring(data, i+10, strlen(data)-(i+10));
 				else if (wheelType == 1){
-					wheel* temp = realloc(wheelEvents, (rWheels+1)*sizeof(*wheelEvents));
-					wheelEvents = temp;
-					wheelEvents[rWheels].right = Substring(data, i+10, strlen(data)-(i+10));
-					wheelEvents[rWheels].left = "NULL";
+					if (rWheels != 0){
+						wheel* temp = realloc(wheelEvents, (rWheels+1)*sizeof(*wheelEvents));
+						wheelEvents = temp;
+						wheelEvents[rWheels].right = Substring(data, i+10, strlen(data)-(i+10));
+						wheelEvents[rWheels].left = "NULL";
+					}else{
+						wheelEvents = malloc(sizeof(wheel));
+						wheelEvents[0].right = Substring(data, i+10, strlen(data)-(i+10));
+						wheelEvents[0].left = "NULL";
+					}
 					rWheels++;
 				}else{
 					if (lWheels < rWheels)
 						wheelEvents[lWheels].left = Substring(data, i+10, strlen(data)-(i+10));
 					else{
-						wheel* temp = realloc(wheelEvents, (lWheels+1)*sizeof(*wheelEvents));
-						wheelEvents = temp;
-						wheelEvents[lWheels].left = Substring(data, i+10, strlen(data)-(i+10));
-						wheelEvents[lWheels].right = "NULL";
+						if (lWheels != 0){
+							wheel* temp = realloc(wheelEvents, (lWheels+1)*sizeof(*wheelEvents));
+							wheelEvents = temp;
+							wheelEvents[lWheels].left = Substring(data, i+10, strlen(data)-(i+10));
+							wheelEvents[lWheels].right = "NULL";
+						}else{
+							wheelEvents = malloc(sizeof(wheel));
+							wheelEvents[0].left = Substring(data, i+10, strlen(data)-(i+10));
+							wheelEvents[0].right = "NULL";
+						}
 					}
 					lWheels++;
 				}
@@ -168,40 +180,38 @@ void GetDevice(int debug, int accept, int dry){
 				}
 			}else if (devDesc.idVendor == vid && devDesc.idProduct == pid){
 				if (accept == 1){
-					err=libusb_open(dev, &handle);
-					if (err < 0){
-						printf("\nUnable to open device. Error: %d\n", err);
-						handle=NULL;
-						if (err == LIBUSB_ERROR_ACCESS){
-							printf("Error: Permission denied\n");
-							return;
+					if (uid != 0){
+						err=libusb_open(dev, &handle);
+						if (err < 0){
+							printf("\nUnable to open device. Error: %d\n", err);
+							handle=NULL;
+							if (err == LIBUSB_ERROR_ACCESS){
+								printf("Error: Permission denied\n");
+								return;
+							}
 						}
-					}
-					if (debug > 0){
-						printf("\nUsing: %04x:%04x (Bus: %03d Device: %03d)\n", vid, pid, libusb_get_bus_number(dev), libusb_get_device_address(dev));
-					}
-					break;
-				}else{
-					if (uid == 0){ // If the driver is ran as root, it can safely execute the following
+						if (debug > 0)
+							printf("\nUsing: %04x:%04x (Bus: %03d Device: %03d)\n", vid, pid, libusb_get_bus_number(dev), libusb_get_device_address(dev));
+						break;
+					}else{
 						err = libusb_open(dev, &handle);
 						if (err < 0){
 							printf("\nUnable to open device. Error: %d\n", err);
 							handle=NULL;
 						}
 						err = libusb_get_string_descriptor_ascii(handle, devDesc.iProduct, info, 200);
-						if (debug > 0){
+						if (debug > 0)
 							printf("\n#%d | %04x:%04x : %s\n", d, vid, pid, info);
-						}
-						if (strlen(info) == 0){
+						if (strlen(info) == 0)
 							break;
-						}else{
+						else{
 							libusb_close(handle);
 							handle = NULL;
 						}
-					}else{
-						savedDevs[i] = dev;
-						i++;
 					}
+				}else{
+					savedDevs[i] = dev;
+					i++;
 				}
 			}
 		}
@@ -230,7 +240,10 @@ void GetDevice(int debug, int accept, int dry){
 				printf("Unable to open device. Error: %d\n", err);
 				handle=NULL;
 				if (err == LIBUSB_ERROR_ACCESS){
-					printf("Error: Permission denied\n");
+					printf("Permission denied\n");
+					return;
+				}else if (err == LIBUSB_ERROR_IO){
+					printf("I/O error. Try disconnecting and reconnecting the device.");
 					return;
 				}
 			}

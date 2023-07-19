@@ -67,12 +67,19 @@ void GetDevice(int debug, int accept, int dry){
 	}else{
 		f = fopen(file, "r");
 		if (f == NULL){
-			strcpy(file, getpwuid(getuid())->pw_dir);
-			strcat(file, "/.config/KD100/default.cfg");
-			f = fopen(file, "r");
+			char* home = getpwuid(getuid())->pw_dir;
+			file = "/.config/KD100/default.cfg";
+			char temp[strlen(file)+strlen(home)+1];
+			for (int i = 0; i < strlen(home); i++)
+				temp[i] = home[i];
+			for (int i = 0; i < strlen(file); i++)
+				temp[i+strlen(home)] = file[i];
+			temp[strlen(temp)] = '\0';
+
+			f = fopen(temp, "r");
 			if (f == NULL){
 				printf("DEFAULT CONFIGS ARE MISSING!\n");
-				printf("Please add default.cfg to %s/.config/KD100/ or specify a file to use with -c\n", getpwuid(getuid())->pw_dir);
+				printf("Please add default.cfg to %s/.config/KD100/ or specify a file to use with -c\n", home);
 				return;
 			}
 		}
@@ -419,7 +426,7 @@ void Handler(char* key, int type){
 		if (mouse == 'a'){
 			for (int i = 0; i < strlen(key); i++)
 				temp[i+strlen(cmd)] = key[i];
-			temp[strlen(cmd) + strlen(key)] = '\0';
+			temp[strlen(cmd)+strlen(key)] = '\0';
 		}else{
 			temp[strlen(cmd)] = ' ';
 			temp[strlen(cmd)+1] = mouse;
@@ -471,12 +478,14 @@ int main(int args, char *in[])
 			accept=1;
 		}
 		if (strcmp(in[arg], "-c") == 0){
-			if (strlen(in[arg+1]) > 0){
-				strcpy(file, in[arg+1]);
+			if (in[arg+1]){
+				file = in[arg+1];
+				printf("%s\n", file);
 				arg++;
-			}else
+			}else{
 				printf("No config file specified. Exiting...\n");
 				return -8;
+			}
 		}
 	}
 

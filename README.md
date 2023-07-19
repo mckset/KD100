@@ -33,16 +33,18 @@ sudo ./KD100 [options]
 
 **-d**  Enable debug output (can be used twice to output the full packet of data recieved from the device)
 
+**-dry**  Displays data sent from the keydial without send events to the program
+
 **-h**  Displays a help message
 
 Configuring
 ----------
 Edit or copy **default.cfg** to add your own keys/commands and use the '-c' flag to specify the location of the config file
-> **_NOTE:_**  New config files must have the same format and line count as the default file
+> **_NOTE:_**  Config files from v1.31 and below need to be updated. See the example config file for the changes to the wheel function and wheel button
 
 Caveats
 -------
-- This only works on X11 based desktops (because of xdotool)
+- This only works on X11 based desktops (because it relies on xdotool)
 - You do not need to run this with sudo if you set a udev rule for the device. Create/edit a rule file in /etc/udev/rules.d/ and add the following, then save and reboot or reload your udev rules
 ```
 SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GROUP="plugdev"

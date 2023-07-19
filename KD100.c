@@ -1,5 +1,5 @@
 /*
-	V1.3
+	V1.4
 	https://github.com/mckset/KD100.git
 	KD 100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
@@ -13,25 +13,35 @@
 #include<unistd.h>
 #include <pwd.h>
 
-int keycodes[] = {1, 2, 4, 8, 16, 32, 64, 128, 129, 130, 132, 136, 144, 160, 192, 256, 257, 258, 260, 641, 642};
-char file[4096] = "default.cfg";
+typedef struct event event;
+typedef struct wheel wheel;
 
+struct event{
+	int type;
+	char* function;
+};
 
-void GetDevice(int, int);
+struct wheel {
+	char* right;
+	char* left;
+};
+
+const int keycodes[] = {1, 2, 4, 8, 16, 32, 64, 128, 129, 130, 132, 136, 144, 160, 192, 256, 257, 258, 260, 641, 642};
+char* file = "default.cfg";
+
+void GetDevice(int, int, int);
 void Handler(char*, int);
+char* Substring(char*, int, int);
 
 const int vid = 0x256c;
 const int pid = 0x006d;
 
-
-void GetDevice(int debug, int accept){
-	int i=0, err=0, l=0, subL=0, wheelFunction=0, c=0;
-	char data[512]; // Data received from the config file and the USB
-	int type[19]; // Stores the button type
-	char events[19][256]; // Stores the button event key/function
-	char wheelEvents[6][256]; // Stores the wheel keys
-	int prevType = 0; // prevKey function type
-	char prevKey[256]; // Stores the previous event to release held keys
+void GetDevice(int debug, int accept, int dry){
+	int err=0, wheelFunction=0, c=0, b=-1, tButtons=0, wheelType=0, lWheels=0, rWheels=0, tWheels=0;
+	char* data = malloc(sizeof(data)); // Data received from the config file and the USB
+	event* events = malloc(1*sizeof(*events)); // Stores key events and functions
+	wheel* wheelEvents = malloc(1*sizeof(*wheelEvents)); // Stores wheel functions
+	event prevEvent;	
 	uid_t uid=getuid(); // Used to check if the driver was ran as root
 
 	system("clear");
@@ -39,13 +49,14 @@ void GetDevice(int debug, int accept){
 	if (debug > 0){
 		if (debug > 2)
 			debug=2;
-		printf("Version 1.3\nDebug level: %d\n", debug);
-	}
+		printf("Version 1.4\nDebug level: %d\n", debug);
+	}		
 
 	// Load config file
 	if (debug == 1){
 		printf("Loading config...\n");
 	}
+	
 	FILE *f;
 	if (strcmp(file, "default.cfg")){
 		f = fopen(file, "r");
@@ -67,44 +78,62 @@ void GetDevice(int debug, int accept){
 		}
 	}
 	while (fscanf(f, "%[^\n] ", data) == 1){
-		if (l > 19 && l <= 76){ // Button functions
-			if (subL == 0){
-				type[i] = atoi(&data[5]);
-				subL = 1;
-			}else if (subL == 1){
-				char func[256];
-				if (strlen(data) < 256){
-					for (int d = 10; d < sizeof(data); d++){
-						func[d-10] = data[d];
-					}
+		for (int i = 0; i < strlen(data) && strlen(data)-6 > 0; i++){
+			if (strcmp(Substring(data, i, 5), "type:") == 0 && b != -1){
+				events[b].type = atoi(Substring(data, i+6, strlen(data)-(i+6)));
+				break;
+			}else if (strcmp(Substring(data, i, 6), "Button") == 0){
+				b = atoi(Substring(data, i+7, strlen(data)-(i+7)));
+				if (b >= tButtons){
+					event* temp = realloc(events, (b+1)*sizeof(*events));
+					events = temp;
+					tButtons = b+1;
+				}
+				break;
+			}else if (strcmp(Substring(data, i, 9), "function:") == 0 && b != -1){
+				if (!wheelType)
+					events[b].function = Substring(data, i+10, strlen(data)-(i+10));
+				else if (wheelType == 1){
+					wheel* temp = realloc(wheelEvents, (rWheels+1)*sizeof(*wheelEvents));
+					wheelEvents = temp;
+					wheelEvents[rWheels].right = Substring(data, i+10, strlen(data)-(i+10));
+					wheelEvents[rWheels].left = "NULL";
+					rWheels++;
 				}else{
-					strcpy(func, "NULL");
-					printf("Line: %d - Function length exceeded 256 characters. Ignoring %s\n", l, data);
+					if (lWheels < rWheels)
+						wheelEvents[lWheels].left = Substring(data, i+10, strlen(data)-(i+10));
+					else{
+						wheel* temp = realloc(wheelEvents, (lWheels+1)*sizeof(*wheelEvents));
+						wheelEvents = temp;
+						wheelEvents[lWheels].left = Substring(data, i+10, strlen(data)-(i+10));
+						wheelEvents[lWheels].right = "NULL";
+					}
+					lWheels++;
 				}
-				strcpy(events[i], func);
-				subL = -1;
-				i++;
-			}else{
-				subL+=1;
-			}
-		}else if (l > 76 && l < 85){ // Wheel functions
-			if (subL < 3){
-				char func[256];
-				for (int d = 12; d < sizeof(data); d++){
-					func[d-12] = data[d];
-				}
-				strcpy(wheelEvents[wheelFunction], func);
-				wheelFunction++;
-				subL++;
-			}else{
-				subL=0;
+				
+					
+				break;
+			}else if (strcmp(Substring(data, i, 6), "Wheel ") == 0){
+				wheelType++;
 			}
 		}
-		l++;
 	}
 	wheelFunction=0;
+	if (rWheels > lWheels)
+		tWheels = rWheels;
+	else
+		tWheels = lWheels;
 
-	i = 0;
+	if (debug > 0){
+		for (int i = 0; i < tButtons; i++)
+			printf("Button: %d | Type: %d | Function: %s\n", i, events[i].type, events[i].function);
+		printf("\n");
+		for (int i = 0; i < tWheels; i++)
+			printf("Wheel Right: %s | Wheel Left: %s\n", wheelEvents[i].right, wheelEvents[i].left);
+		printf("\n");
+	}
+
+	int i = 0;
 	char indi[] = "|/-\\";
 	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){
 		libusb_device **devs; // List of USB devices
@@ -200,7 +229,7 @@ void GetDevice(int debug, int accept){
 			}
 		}
 
-		
+
 
 		i=0;
 		if (handle == NULL){
@@ -240,7 +269,8 @@ void GetDevice(int debug, int accept){
 			err = 0;
 			// Listen for events
 			printf("Driver is running!\n");
-		
+		prevEvent.function = "";
+		prevEvent.type = 0;
 		while (err >=0){
 			unsigned char data[40]; // Stores device input
 			int keycode = 0; // Keycode read from the device
@@ -275,69 +305,70 @@ void GetDevice(int debug, int accept){
 				keycode = data[6] + 256;
 			if (data[1] == 241)
 				keycode+=512;
+			if (dry)
+				keycode = 0;
 
 			// Compare keycodes to data and trigger events
 			if (debug == 1 && keycode != 0){
 				printf("Keycode: %d\n", keycode);
 			}
-			if (keycode == 0 && prevType != 0){ // Reset key held
-				Handler(prevKey, prevType);
-				strcpy(prevKey, "");
-				prevType=0;
+			if (keycode == 0 && prevEvent.type != 0){ // Reset key held
+				Handler(prevEvent.function, prevEvent.type);
+				prevEvent.function = "";
+				prevEvent.type = 0;
 			}
-			if (keycode == 641){ // Wheel Clockwise
-				Handler(wheelEvents[wheelFunction], -1);
-			}else if (keycode == 642){
-				Handler(wheelEvents[wheelFunction + 3], -1);
+			if (keycode == 641){ // Wheel clockwise
+				Handler(wheelEvents[wheelFunction].right, -1);
+			}else if (keycode == 642){ // Counter clockwise
+				Handler(wheelEvents[wheelFunction].left, -1);
 			}else{
 				for (int k = 0; k < 19; k++){
 					if (keycodes[k] == keycode){
-						if (strcmp(events[k], "NULL") == 0){
-							if (prevType != 0){
-								Handler(prevKey, prevType);
-								prevType = 0;
-								strcpy(prevKey, "");
+						if (events[k].function){
+							if (strcmp(events[k].function, "NULL") == 0){
+								if (prevEvent.type != 0){
+									Handler(prevEvent.function, prevEvent.type);
+									prevEvent.type = 0;
+									prevEvent.function = "";
+								}
+								break;
+							}
+							if (events[k].type == 0){
+								if (strcmp(events[k].function, prevEvent.function)){
+									if (prevEvent.type != 0){
+										Handler(prevEvent.function, prevEvent.type);
+									}
+									prevEvent.function = events[k].function;
+									prevEvent.type=1;
+								}
+								Handler(events[k].function, 0);
+							}else if (strcmp(events[k].function, "swap") == 0){
+								if (wheelFunction != tWheels-1){
+									wheelFunction++;
+								}else
+									wheelFunction=0;
+								if (debug == 1){
+									printf("Function: %s | %s\n", wheelEvents[wheelFunction].left, wheelEvents[wheelFunction].right);
+								}
+							}else if (strcmp(events[k].function, "mouse1") == 0 || strcmp(events[k].function, "mouse2") == 0 || strcmp(events[k].function, "mouse3") == 0 || strcmp(events[k].function, "mouse4") == 0 || strcmp(events[k].function, "mouse5") == 0){
+								if (strcmp(events[k].function, prevEvent.function)){
+									if (prevEvent.type != 0){
+										Handler(prevEvent.function, prevEvent.type);
+									}
+									prevEvent.function = events[k].function;
+									prevEvent.type=3;
+								}
+								Handler(events[k].function, 2);
+							}else{
+								system(events[k].function);
 							}
 							break;
 						}
-						if (type[k] == 0){
-							if (strcmp(events[k], prevKey)){
-								if (prevType != 0){
-									Handler(prevKey, prevType);
-								}
-								strcpy(prevKey, events[k]);
-								prevType=1;
-							}
-							Handler(events[k], 0);
-						}else if (strcmp(events[k], "swap") == 0){
-							if (wheelFunction != 2){
-								wheelFunction++;
-								if (strcmp(wheelEvents[wheelFunction], "NULL") == 0){
-									wheelFunction = 0;
-								}
-								if (debug == 1){
-									printf("Function: %s\n", wheelEvents[wheelFunction]);
-								}
-							}else
-								wheelFunction=0;
-						}else if (strcmp(events[k], "mouse1") == 0 || strcmp(events[k], "mouse2") == 0 || strcmp(events[k], "mouse3") == 0 || strcmp(events[k], "mouse4") == 0 || strcmp(events[k], "mouse5") == 0){
-							if (strcmp(events[k], prevKey)){
-								if (prevType != 0){
-									Handler(prevKey, prevType);
-								}
-								strcpy(prevKey, events[k]);
-								prevType=3;
-							}
-							Handler(events[k], 2);
-						}else{
-							system(events[k]);
-						}
-						break;
 					}
 				}
 			}
 
-			if(debug == 2){
+			if(debug == 2 || dry){
 				printf("DATA: [%d", data[0]);
 				for (int i = 1; i < sizeof(data); i++){
 					printf(", %d", data[i]);
@@ -347,8 +378,7 @@ void GetDevice(int debug, int accept){
 		}
 
 
-		// Cleanup
-
+			// Cleanup
 			for (int x = 0; x<i; x++) {
 				if (debug == 1){
 					printf("Releasing interface %d...\n", x);
@@ -364,36 +394,61 @@ void GetDevice(int debug, int accept){
 }
 
 
-void Handler(char *key, int type){
-	char cmd[529] = "xdotool key";
+void Handler(char* key, int type){
+	char* cmd = "";
+	char mouse = 'a';
+
 	if (type < 2){
-		if (type == 0){
-			strcat(cmd, "down");
-		}else if (type == 1){
-			strcat(cmd, "up");
-		}
-		strcat(cmd, " ");
-		strcat(cmd, key);
+		if (type == 0)
+			cmd = "xdotool keydown ";
+		else if (type == 1)
+			cmd = "xdotool keyup ";	
+		else
+			cmd = " xdotool key ";		
 	}else{
-		if (type == 2){
-			strcpy(cmd,"xdotool mousedown ");
-		}else if (type == 3){
-			strcpy(cmd,"xdotool mouseup ");
-		}
-		strcat(cmd, " ");
-		strcat(cmd, &key[5]);
+		if (type == 2)
+			cmd = "xdotool mousedown ";
+		else if (type == 3)
+			cmd = "xdotool mouseup ";
+		mouse = key[5];
 	}
-	system(cmd);
+	if (cmd){
+		char temp[strlen(cmd)+strlen(key)+1];
+		for (int i = 0; i < strlen(cmd); i++)
+			temp[i] = cmd[i];
+		if (mouse == 'a'){
+			for (int i = 0; i < strlen(key); i++)
+				temp[i+strlen(cmd)] = key[i];
+			temp[strlen(cmd) + strlen(key)] = '\0';
+		}else{
+			temp[strlen(cmd)] = ' ';
+			temp[strlen(cmd)+1] = mouse;
+			temp[strlen(cmd)+2] = '\0';
+		}
+		system(temp);
+	}	
 }
+
+char* Substring(char* in, int start, int end){
+	if (start > strlen(in) || end + start > strlen(in)){
+		return in;
+	}
+	char* out = malloc(end+1);
+	for (int i = 0; i < end; i++)
+		out[i] = in[i+start];
+	out[end] = '\0';
+	return out;
+}
+
 
 int main(int args, char *in[])
 {
-	int d=0, a=0, err;
+	int debug=0, accept=0, dry=0, err;
 
 	err = system("xdotool sleep 0.01");
 	if (err != 0){
 		printf("Exitting...\n");
-		return -1;
+		return -9;
 	}
 
 	for (int arg = 1; arg < args; arg++){
@@ -402,20 +457,26 @@ int main(int args, char *in[])
 			printf("\t-a\t\tAssume the first device that matches %04x:%04x is the Keydial\n", vid, pid);
 			printf("\t-c [path]\tSpecifies a config file to use\n");
 			printf("\t-d [-d]\t\tEnable debug outputs (use twice to view data sent by the device)\n");
+			printf("\t-dry \t\tDisplay data sent by the device without sending events\n");
 			printf("\t-h\t\tDisplays this message\n\n");
 			return 0;
 		}
 		if (strcmp(in[arg],"-d") == 0){
-			d++;
+			debug++;
+		}
+		if (strcmp(in[arg],"-dry") == 0){
+			dry=1;
 		}
 		if (strcmp(in[arg],"-a") == 0){
-			a=1;
+			accept=1;
 		}
 		if (strcmp(in[arg], "-c") == 0){
 			if (strlen(in[arg+1]) > 0){
 				strcpy(file, in[arg+1]);
 				arg++;
-			}
+			}else
+				printf("No config file specified. Exiting...\n");
+				return -8;
 		}
 	}
 
@@ -426,8 +487,9 @@ int main(int args, char *in[])
 		printf("Error: %d\n", err);
 		return err;
 	}
-	libusb_set_option(*ctx, LIBUSB_OPTION_LOG_LEVEL, 0);
-	GetDevice(d, a);
+	// Uncomment for more detailed debugging (might cause segmentation errors on some systems)
+	//libusb_set_option(*ctx, LIBUSB_OPTION_LOG_LEVEL, 0); 
+	GetDevice(debug, accept, dry);
 	libusb_exit(*ctx);
 	return 0;
 }

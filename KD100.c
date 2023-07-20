@@ -38,7 +38,7 @@ const int pid = 0x006d;
 
 void GetDevice(int debug, int accept, int dry){
 	int err=0, wheelFunction=0, c=0, b=-1, tButtons=0, wheelType=0, lWheels=0, rWheels=0, tWheels=0;
-	char* data = malloc(sizeof(data)); // Data received from the config file and the USB
+	char* data = malloc(512*sizeof(char)); // Data received from the config file and the USB
 	event* events = malloc(1*sizeof(*events)); // Stores key events and functions
 	wheel* wheelEvents = malloc(1*sizeof(wheel)); // Stores wheel functions
 	event prevEvent;	
@@ -144,8 +144,7 @@ void GetDevice(int debug, int accept, int dry){
 			printf("Wheel Right: %s | Wheel Left: %s\n", wheelEvents[i].right, wheelEvents[i].left);
 		printf("\n");
 	}
-
-
+	free(data);
 	int i = 0;
 	char indi[] = "|/-\\";
 	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){
@@ -174,21 +173,21 @@ void GetDevice(int debug, int accept, int dry){
 				}
 			}else if (devDesc.idVendor == vid && devDesc.idProduct == pid){
 				if (accept == 1){
-					err=libusb_open(dev, &handle);
-					if (err < 0){
-						printf("\nUnable to open device. Error: %d\n", err);
-						handle=NULL;
-						if (err == LIBUSB_ERROR_ACCESS){
-							printf("Error: Permission denied\n");
-							return;
+					if (uid != 0){
+						err=libusb_open(dev, &handle);
+						if (err < 0){
+							printf("\nUnable to open device. Error: %d\n", err);
+							handle=NULL;
+							if (err == LIBUSB_ERROR_ACCESS){
+								printf("Error: Permission denied\n");
+								return;
+							}
 						}
-					}
-					if (debug > 0){
-						printf("\nUsing: %04x:%04x (Bus: %03d Device: %03d)\n", vid, pid, libusb_get_bus_number(dev), libusb_get_device_address(dev));
-					}
-					break;
-				}else{
-					if (uid == 0){ // If the driver is ran as root, it can safely execute the following
+						if (debug > 0){
+							printf("\nUsing: %04x:%04x (Bus: %03d Device: %03d)\n", vid, pid, libusb_get_bus_number(dev), libusb_get_device_address(dev));
+						}
+						break;
+					}else{ // If the driver is ran as root, it can safely execute the following
 						err = libusb_open(dev, &handle);
 						if (err < 0){
 							printf("\nUnable to open device. Error: %d\n", err);
@@ -204,15 +203,15 @@ void GetDevice(int debug, int accept, int dry){
 							libusb_close(handle);
 							handle = NULL;
 						}
-					}else{
-						savedDevs[i] = dev;
-						i++;
 					}
+				}else{
+					savedDevs[i] = dev;
+					i++;
 				}
 			}
 		}
 
-		if (i > 0){
+		if (accept == 0){
 			int in=-1;
 			while(in == -1){
 				char buf[64];
@@ -409,6 +408,9 @@ void GetDevice(int debug, int accept, int dry){
 
 
 void Handler(char* key, int type){
+	if (strcmp(key, "NULL") == 0)
+		return 0;
+
 	char* cmd = "";
 	char mouse = 'a';
 
@@ -498,7 +500,7 @@ int main(int args, char *in[])
 
 	libusb_context **ctx;
 
-	err = libusb_init(ctx);
+	err = libusb_init(&ctx);
 	if (err < 0){
 		printf("Error: %d\n", err);
 		return err;
@@ -506,6 +508,6 @@ int main(int args, char *in[])
 	// Uncomment to enable libusb debug messages (might not work with older versions of libusb)
 	// libusb_set_option(*ctx, LIBUSB_OPTION_LOG_LEVEL, 1);
 	GetDevice(debug, accept, dry);
-	libusb_exit(*ctx);
+	libusb_exit(ctx);
 	return 0;
 }

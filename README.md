@@ -1,15 +1,17 @@
 # Huion KD100 Linux Driver
 A simple driver for the Huion KD100 mini Keydial written in C to give the device some usability while waiting for Huion to fix their Linux drivers. Each button can be configured to either act as a key/multiple keys or to execute a program/command
 
+> **_NOTICE:_**  When updating from **v1.31** or below, make sure you updated your config file to follow the new format shown in the default config file
+
 Pre-Installation
 ------------
-Arch Linux:
+Arch Linux/Manjaro:
 ```
 sudo pacman -S libusb-1.0 xdotool
 ```
-Ubuntu/Debian:
+Ubuntu/Debian/Pop OS:
 ```
-sudo apt-get install libusb-1.0 xdotool
+sudo apt-get install libusb-1.0-0-dev xdotool
 ```
 > **_NOTE:_**  Some distros label libusb as "libusb-1.0-0" and others might require the separate "libusb-1.0-dev" package
 
@@ -22,6 +24,8 @@ cd KD100
 make
 ```
 
+> Running make as root will install the driver as a command and create a folder in ~/.config to store config files
+
 Usage
 -----
 ```
@@ -33,21 +37,21 @@ sudo ./KD100 [options]
 
 **-d**  Enable debug output (can be used twice to output the full packet of data recieved from the device)
 
+**-dry**  Display data sent from the keydial and ignore events
+
 **-h**  Displays a help message
 
 Configuring
 ----------
-Edit or copy **default.cfg** to add your own keys/commands and use the '-c' flag to specify the location of the config file
-> **_NOTE:_**  New config files must have the same format and line count as the default file
+Edit or copy **default.cfg** to add your own keys/commands and use the '-c' flag to specify the location of the config file. New config files do not need to end in ".cfg".
 
 Caveats
 -------
-- This only works on X11 based desktops (because of xdotool)
+- This only works on X11 based desktops (because it relies on xdotool) but can be patched for wayland desktops by altering the "handler" function
 - You do not need to run this with sudo if you set a udev rule for the device. Create/edit a rule file in /etc/udev/rules.d/ and add the following, then save and reboot or reload your udev rules
 ```
 SUBSYSTEM=="usb",ATTRS{idVendor}=="256c",ATTRS{idProduct}=="006d",MODE="0666",GROUP="plugdev"
 ```
-- If the driver is ran as a user and the '-a' flag is not used, you will need to select the device to use during startup
 - Technically speaking, this can support other devices, especially if they send the same type of byte information, otherwise the code should be easy enough to edit and add support for other usb devices. If you want to see the information sent by different devices, change the vid and pid in the program and run it with two debug flags
 
 Tested Distros
@@ -55,7 +59,7 @@ Tested Distros
 - Arch linux
 - Manjaro
 - Ubuntu
-- Kali Linux
+- Pop OS
 
 Known Issues
 ------------

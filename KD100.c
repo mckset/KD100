@@ -1,7 +1,7 @@
 /*
 	V1.4
 	https://github.com/mckset/KD100.git
-	KD 100 Linux driver for X11 desktops
+	KD100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
 	At the moment, only the KD100 mini keypad is supported by this code officially
 */
@@ -150,7 +150,7 @@ void GetDevice(int debug, int accept, int dry){
 	while (err == 0 || err == LIBUSB_ERROR_NO_DEVICE){
 		libusb_device **devs; // List of USB devices
 		libusb_device *dev; // Selected USB device
-		struct libusb_config_descriptor *desc; // USB descrition (For claiming interfaces)
+		struct libusb_config_descriptor *desc; // USB description (For claiming interfaces)
 		libusb_device_handle *handle = NULL; // USB handle
 
 		err = libusb_get_device_list(NULL, &devs);
@@ -505,8 +505,8 @@ int main(int args, char *in[])
 		printf("Error: %d\n", err);
 		return err;
 	}
-	// Uncomment to enable libusb debug messages (might not work with older versions of libusb)
-	// libusb_set_option(*ctx, LIBUSB_OPTION_LOG_LEVEL, 1);
+	// Uncomment to enable libusb debug messages
+	// libusb_set_option(ctx, LIBUSB_OPTION_LOG_LEVEL, 1);
 	GetDevice(debug, accept, dry);
 	libusb_exit(ctx);
 	return 0;

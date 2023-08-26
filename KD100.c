@@ -160,7 +160,7 @@ void GetDevice(int debug, int accept, int dry){
 		}
 
 		// Gets a list of devices and looks for ones that have the same vid and pid
-		int d=0;
+		int d=0, found=0;
 		i=0;
 		libusb_device *savedDevs[sizeof(devs)];
 		while ((dev = devs[d++]) != NULL){
@@ -197,8 +197,14 @@ void GetDevice(int debug, int accept, int dry){
 						if (debug > 0){
 							printf("\n#%d | %04x:%04x : %s\n", d, vid, pid, info);
 						}
-						if (handle != NULL)
+						if (strlen(info) == 0 || strcmp("Huion Tablet_KD100", info) == 0){
+							found=0;
 							break;
+						}else{
+							libusb_close(handle);
+							handle = NULL;
+							found++;
+						}
 					}
 				}else{
 					savedDevs[i] = dev;
@@ -206,7 +212,6 @@ void GetDevice(int debug, int accept, int dry){
 				}
 			}
 		}
-
 		if (accept == 0){
 			int in=-1;
 			while(in == -1){
@@ -235,6 +240,10 @@ void GetDevice(int debug, int accept, int dry){
 					return;
 				}
 			}
+		}else if (found > 0){
+			printf("Error: Found device does not appear to be the keydial\n");
+			printf("Try running without the -a flag\n");
+			return;
 		}
 
 		

@@ -1,5 +1,5 @@
 /*
-	V1.4
+	V1.4.1
 	https://github.com/mckset/KD100.git
 	KD100 Linux driver for X11 desktops
 	Other devices can be supported by modifying the code to read data received by the device
@@ -197,12 +197,8 @@ void GetDevice(int debug, int accept, int dry){
 						if (debug > 0){
 							printf("\n#%d | %04x:%04x : %s\n", d, vid, pid, info);
 						}
-						if (strlen(info) == 0){
+						if (handle != NULL)
 							break;
-						}else{
-							libusb_close(handle);
-							handle = NULL;
-						}
 					}
 				}else{
 					savedDevs[i] = dev;

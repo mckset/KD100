@@ -35,6 +35,7 @@ char* Substring(char*, int, int);
 
 const int vid = 0x256c;
 const int pid = 0x006d;
+const int ipid = 2;
 
 void GetDevice(int debug, int accept, int dry){
 	int err=0, wheelFunction=0, c=0, b=-1, tButtons=0, wheelType=0, lWheels=0, rWheels=0, tWheels=0;
@@ -172,37 +173,31 @@ void GetDevice(int debug, int accept, int dry){
 					printf("Unable to retrieve info from device #%d. Ignoring...\n", d);
 				}
 			}else if (devDesc.idVendor == vid && devDesc.idProduct == pid){
-				if (accept == 1){
-					if (uid != 0){
-						err=libusb_open(dev, &handle);
-						if (err < 0){
-							printf("\nUnable to open device. Error: %d\n", err);
-							handle=NULL;
-							if (err == LIBUSB_ERROR_ACCESS){
-								printf("Error: Permission denied\n");
-								return;
-							}
-						}
-						if (debug > 0){
-							printf("\nUsing: %04x:%04x (Bus: %03d Device: %03d)\n", vid, pid, libusb_get_bus_number(dev), libusb_get_device_address(dev));
-						}
+				   if (accept == 1){
+					err = libusb_open(dev, &handle);
+					if (err < 0){
+					    printf("\nUnable to open device. Error: %d\n", err);
+					    handle = NULL;
+					    
+					    if (uid != 0 && err == LIBUSB_ERROR_ACCESS){
+						printf("Error: Permission denied\n");
+						return;
+					    }
+					}
+
+					if (handle) {
+					    err = libusb_get_string_descriptor_ascii(handle, devDesc.iProduct, info, 200);
+
+					    if (debug > 0){
+						printf("\n#%d | %04x:%04x : %s\n", d, vid, pid, info);
+					    }
+
+					    if (devDesc.iProduct == ipid || strlen(info) == 0) {
 						break;
-					}else{ // If the driver is ran as root, it can safely execute the following
-						err = libusb_open(dev, &handle);
-						if (err < 0){
-							printf("\nUnable to open device. Error: %d\n", err);
-							handle=NULL;
-						}
-						err = libusb_get_string_descriptor_ascii(handle, devDesc.iProduct, info, 200);
-						if (debug > 0){
-							printf("\n#%d | %04x:%04x : %s\n", d, vid, pid, info);
-						}
-						if (strlen(info) == 0){
-							break;
-						}else{
-							libusb_close(handle);
-							handle = NULL;
-						}
+					    } else {
+						libusb_close(handle);
+						handle = NULL;
+					    }
 					}
 				}else{
 					savedDevs[i] = dev;

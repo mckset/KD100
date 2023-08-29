@@ -74,7 +74,6 @@ void GetDevice(int debug, int accept, int dry){
                         for (int i = 0; i < strlen(file); i++)
                                 temp[i+strlen(home)+strlen(config)] = file[i];
                         temp[strlen(home)+strlen(config)+strlen(file)] = '\0';
-                        printf("%s\n", temp);
                         f = fopen(temp, "r");
                         if (f == NULL){
                                 printf("CONFIG FILE NOT FOUND\n");

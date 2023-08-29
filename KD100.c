@@ -64,9 +64,23 @@ void GetDevice(int debug, int accept, int dry){
 	if (strcmp(file, "default.cfg")){
 		f = fopen(file, "r");
 		if (f == NULL){
-			printf("CONFIG FILE NOT FOUND\n");
-			return;
-		}
+                        char* home = getpwuid(getuid())->pw_dir;
+                        char* config = "/.config/KD100/";
+                        char temp[strlen(home)+strlen(config)+strlen(file)+1];
+                        for (int i = 0; i < strlen(home); i++)
+                                temp[i] = home[i];
+                        for (int i = 0; i < strlen(config); i++)
+                                temp[i+strlen(home)] = config[i];
+                        for (int i = 0; i < strlen(file); i++)
+                                temp[i+strlen(home)+strlen(config)] = file[i];
+                        temp[strlen(home)+strlen(config)+strlen(file)] = '\0';
+                        printf("%s\n", temp);
+                        f = fopen(temp, "r");
+                        if (f == NULL){
+                                printf("CONFIG FILE NOT FOUND\n");
+                                return;
+                        }
+                }
 	}else{
 		f = fopen(file, "r");
 		if (f == NULL){
@@ -77,7 +91,7 @@ void GetDevice(int debug, int accept, int dry){
 				temp[i] = home[i];
 			for (int i = 0; i < strlen(file); i++)
 				temp[i+strlen(home)] = file[i];
-			temp[strlen(temp)] = '\0';
+			temp[strlen(home) + strlen(file)] = '\0';
 
 			f = fopen(temp, "r");
 			if (f == NULL){

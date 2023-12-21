@@ -16,4 +16,4 @@ install:
 
 
 clean:
-	rm -f KD100.c
+	rm -f KD100

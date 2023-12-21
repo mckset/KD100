@@ -422,7 +422,7 @@ void GetDevice(int debug, int accept, int dry){
 
 void Handler(char* key, int type){
 	if (strcmp(key, "NULL") == 0)
-		return 0;
+		return;
 
 	char* cmd = "";
 	char mouse = 'a';
@@ -510,7 +510,7 @@ int main(int args, char *in[]){
 		}
 	}
 
-	libusb_context **ctx;
+	libusb_context *ctx;
 	err = libusb_init(&ctx);
 	if (err < 0){
 		printf("Error: %d\n", err);

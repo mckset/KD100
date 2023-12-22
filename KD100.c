@@ -510,6 +510,7 @@ int main(int args, char *in[]){
 		}
 	}
 
+
 	libusb_context *ctx;
 	err = libusb_init(&ctx);
 	if (err < 0){

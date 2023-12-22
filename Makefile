@@ -13,7 +13,3 @@ install:
 	else\
 		${CC} KD100.c ${FLAGS} -o KD100;\
 	fi
-
-
-clean:
-	rm -f KD100.c

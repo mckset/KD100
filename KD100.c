@@ -39,7 +39,7 @@ const int pid = 0x006d;
 void GetDevice(int debug, int accept, int dry){
 	int err=0, wheelFunction=0, button=-1, totalButtons=0, wheelType=0, leftWheels=0, rightWheels=0, totalWheels=0;
 	char* data = malloc(512*sizeof(char)); // Data received from the config file and the USB
-	event* events = malloc(1*sizeof(*events)); // Stores key events and functions
+	event* events = malloc(1*sizeof(event)); // Stores key events and functions
 	wheel* wheelEvents = malloc(1*sizeof(wheel)); // Stores wheel functions
 	event prevEvent;
 	uid_t uid=getuid(); // Used to check if the driver was ran as root
